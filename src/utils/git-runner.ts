@@ -38,7 +38,7 @@ export class GitRunner {
 		let branches = res.split("\n").map((line) =>
 			line
 				.replaceAll(/[\(\)\*]/g, "")
-				.replace(/HEAD detached (?:from|at) /, "DETACHED - ")
+				.replace(/HEAD detached (?:from|at) /, "DETACHED:")
 				.trim(),
 		);
 
@@ -46,8 +46,8 @@ export class GitRunner {
 		if (options?.sort === "date") {
 			const timestamps: { [branch: string]: number } = {};
 			await Aux.async.map(branches, async (branch) => {
-				const isDetached = branch.startsWith("DETACHED - ");
-				if (isDetached) branch = branch.replace(/DETACHED - /, "");
+				const isDetached = branch.startsWith("DETACHED:");
+				if (isDetached) branch = branch.replace(/DETACHED:/, "");
 
 				timestamps[branch] = parseInt(
 					await this.run(

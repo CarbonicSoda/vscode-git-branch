@@ -231,8 +231,8 @@ export namespace GitBranchesTreeView {
 				return await Aux.async.map(branches, async (branch) => {
 					let colorHashString = branch;
 
-					const isDetached = branch.startsWith("DETACHED - ");
-					if (isDetached) branch = branch.replace(/DETACHED - /, "");
+					const isDetached = branch.startsWith("DETACHED:");
+					if (isDetached) branch = branch.replace(/DETACHED:/, "");
 
 					const item = new BranchItem(branch, expandBranches);
 
@@ -244,7 +244,7 @@ export namespace GitBranchesTreeView {
 						noRevision = true;
 					}
 
-					const type = isDetached ? "DETACHED" : isRemote ? "Remote" : "Local";
+					const type = isDetached ? "Detached" : isRemote ? "Remote" : "Local";
 					colorHashString += type;
 					item.description = `${type}${noRevision ? "" : " - " + latestHash}`;
 
