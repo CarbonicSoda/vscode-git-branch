@@ -9,8 +9,9 @@ import {
 	TreeItem,
 	TreeItemCollapsibleState,
 	ThemeIcon,
+	MarkdownString,
 } from "vscode";
-import { API as GitAPI, GitExtension, RefType, Repository } from "./declarations/git";
+import { API as GitAPI, GitExtension, Repository } from "./declarations/git";
 
 import { Aux } from "./utils/auxiliary";
 import { Janitor } from "./utils/janitor";
@@ -29,6 +30,8 @@ export namespace GitBranchesTreeView {
 	const TIMEOUT_GET_REPO = 10;
 
 	const PINNED_COLOR = VSColors.interpolate("#FFD700");
+
+	const SEPARATOR_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
 
 	//#endregion CONSTANTS
 
@@ -50,13 +53,14 @@ export namespace GitBranchesTreeView {
 	/**
 	 * Git Branches tree data provider
 	 */
-	class Provider implements TreeDataProvider<BranchItem> {
+	class Provider implements TreeDataProvider<BranchItem | typeof SEPARATOR_ITEM> {
 		currRepo: Repository | null;
 		currRepoFsPath?: string;
 
-		items: BranchItem[] = [];
+		items: (BranchItem | typeof SEPARATOR_ITEM)[] = [];
 
 		private gitAPI: GitAPI;
+		//MO TODO monitor git.path change
 		private gitPath: string;
 		private gitEnabled: boolean;
 		private gitRunner?: GitRunner;
@@ -66,27 +70,31 @@ export namespace GitBranchesTreeView {
 		>();
 		onDidChangeTreeData: Event<void | undefined | BranchItem> = this.treeDataChangeEmitter.event;
 
+		get enabled(): boolean {
+			return this.gitEnabled && this.gitRunner !== undefined;
+		}
+
 		/**
 		 * Init provider and loads tree items
 		 */
 		async initProvider(): Promise<void> {
-			this.gitAPI = await this.getGitAPI();
-			this.gitPath = this.gitAPI.git.path;
-
+			await this.updateGitAPI();
 			this.gitEnabled = true;
+
 			ConfigMaid.onChange("git.enabled", (enabled) => {
 				this.gitEnabled = enabled;
 			});
+			ConfigMaid.onChange("git.path", this.updateGitAPI);
 
-			this.currRepo = await this.getPrimaryRepo();
-			this.reloadItems();
+			Janitor.add(
+				this.gitAPI.onDidCloseRepository(async (repo) => {
+					if (repo !== this.currRepo) return;
+					await this.updateCurrRepo();
+				}),
+			);
 
-			if (this.currRepo) {
-				this.currRepoFsPath = this.currRepo.rootUri.fsPath;
-				this.gitRunner = new GitRunner(this.gitPath, this.currRepoFsPath);
-			}
-
-			//MO TODO both shall be updated on currRepo update
+			await this.updateCurrRepo();
+			await this.reloadItems();
 		}
 
 		/**
@@ -107,6 +115,11 @@ export namespace GitBranchesTreeView {
 				});
 			});
 			return gitExtension.exports.getAPI(VSCODE_GIT_API_VERSION);
+		}
+
+		async updateGitAPI(): Promise<void> {
+			this.gitAPI = await this.getGitAPI();
+			this.gitPath = this.gitAPI.git.path;
 		}
 
 		/**
@@ -130,6 +143,28 @@ export namespace GitBranchesTreeView {
 			});
 		}
 
+		async updateCurrRepo(): Promise<void> {
+			this.currRepo = await new Promise((res) => {
+				const check = async () => {
+					const repo = await this.getPrimaryRepo();
+					if (repo) {
+						listener.dispose();
+						return res(repo);
+					}
+					setTimeout(check, 1000);
+				};
+				check();
+
+				const listener = this.gitAPI.onDidOpenRepository((repo) => {
+					listener.dispose();
+					res(repo);
+				});
+			});
+
+			this.currRepoFsPath = this.currRepo.rootUri.fsPath;
+			this.gitRunner = new GitRunner(this.gitPath, this.currRepoFsPath);
+		}
+
 		//#region Interface implementation methods
 
 		getTreeItem(element: BranchItem): BranchItem {
@@ -140,7 +175,7 @@ export namespace GitBranchesTreeView {
 			return element.parent;
 		}
 
-		getChildren(element: BranchItem | undefined): BranchItem[] {
+		getChildren(element: BranchItem | undefined): (BranchItem | typeof SEPARATOR_ITEM)[] {
 			if (element) return element.children;
 			return this.items;
 		}
@@ -152,7 +187,7 @@ export namespace GitBranchesTreeView {
 		 * @param item item to be updated, if not given the whole tree is refreshed
 		 */
 		refresh(item?: BranchItem): void {
-			if (!this.gitEnabled) return;
+			if (!this.enabled) return;
 			this.treeDataChangeEmitter.fire(item);
 		}
 
@@ -160,7 +195,7 @@ export namespace GitBranchesTreeView {
 		 * Reloads provider with updated items
 		 */
 		async reloadItems(): Promise<void> {
-			if (!this.gitEnabled) return;
+			if (!this.enabled) return;
 			this.items = await this.getItems();
 			this.treeDataChangeEmitter.fire();
 		}
@@ -169,55 +204,95 @@ export namespace GitBranchesTreeView {
 		 * Retrieves updates and builds view items
 		 * @returns built items (primary-hierarchy)
 		 */
-		private async getItems(): Promise<BranchItem[]> {
-			if (!this.gitEnabled) return [];
+		private async getItems(): Promise<(BranchItem | typeof SEPARATOR_ITEM)[]> {
+			if (!this.enabled) return;
 
 			const includeRemoteBranches = <boolean>ConfigMaid.get("git-branches.view.includeRemoteBranches");
-			const branchesSortMethod = <"Commit Date" | "Alphabetic">(
-				ConfigMaid.get("git-branches.view.branchesSortMethod")
-			);
+			const branchesSortMethod =
+				<"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.view.branchesSortMethod") === "Commit Date"
+					? "date"
+					: "alphabet";
 			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
-			const defaultExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
+			const defExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
 
-			const branches = await this.currRepo.getBranches({
-				remote: includeRemoteBranches,
-				sort: branchesSortMethod === "Commit Date" ? "committerdate" : "alphabetically",
-			});
+			const localBranches = await this.gitRunner.getBranches("local", { sort: branchesSortMethod });
+			const remoteBranches = includeRemoteBranches
+				? await this.gitRunner.getBranches("remote", { sort: branchesSortMethod })
+				: [];
 
-			const expandBranches = branches.length === 1 ? "none" : defaultExpandBranches;
+			const expandBranches = localBranches.length + remoteBranches.length === 1 ? "none" : defExpandBranches;
 
-			const heads: BranchItem[] = [];
-			await Aux.async.map(branches, async (branch) => {
-				const name = branch.name;
-				const isRemote = branch.type === RefType.RemoteHead;
+			let localHeads: BranchItem[] = [];
+			let remoteHeads: BranchItem[] = [];
+			let detachedHeads: BranchItem[] = [];
+			await Aux.async.map([localBranches, remoteBranches], async (branches, i) => {
+				const isRemote = i === 1;
 
-				let noRevision;
-				let latestHash;
-				try {
-					latestHash = (await this.gitRunner.run("rev-parse", "--short", name)).trim();
-				} catch {
-					noRevision = true;
-				}
+				return await Aux.async.map(branches, async (branch) => {
+					let colorHashString = branch;
 
-				const item = new BranchItem(name, expandBranches);
-				item.description = `${isRemote ? "Remote" : "Local"}${noRevision ? "" : " - " + latestHash}`;
-				item.iconPath = new ThemeIcon(
-					isRemote ? "github-alt" : "git-branch",
-					pinnedBranches.includes(name) ? PINNED_COLOR : VSColors.hash(name),
-				);
-				heads.push(item);
+					const isDetached = branch.startsWith("DETACHED - ");
+					if (isDetached) branch = branch.replace(/DETACHED - /, "");
+
+					const item = new BranchItem(branch, expandBranches);
+
+					let noRevision;
+					let latestHash;
+					try {
+						latestHash = await this.gitRunner.getLatestHash(branch, { short: true });
+					} catch {
+						noRevision = true;
+					}
+
+					const type = isDetached ? "DETACHED" : isRemote ? "Remote" : "Local";
+					colorHashString += type;
+					item.description = `${type}${noRevision ? "" : " - " + latestHash}`;
+
+					const icon = isDetached ? "git-pull-request-draft" : isRemote ? "github-alt" : "git-branch";
+					item.iconPath = new ThemeIcon(
+						icon,
+						pinnedBranches.includes(branch.split("/").at(-1))
+							? PINNED_COLOR
+							: VSColors.hash(colorHashString),
+					);
+
+					const lastUpdated = await this.gitRunner.getUpdatedTime(branch, isRemote, isDetached, "local");
+					item.tooltip = new MarkdownString(
+						`$(${icon}) ${type} - ${branch}  \n${
+							noRevision ? "No Revision" : "Latest: " + latestHash
+						}  \nUpdated ${lastUpdated}`,
+						true,
+					);
+
+					if (isDetached) {
+						detachedHeads.push(item);
+						return;
+					}
+					if (isRemote) {
+						remoteHeads.push(item);
+						return;
+					}
+					localHeads.push(item);
+				});
 			});
 
 			const pinnedBranchesRev = pinnedBranches.reverse();
-			return heads.sort(
-				({ name: nameA }, { name: nameB }) =>
-					pinnedBranchesRev.indexOf(nameB) - pinnedBranchesRev.indexOf(nameA),
-			);
+			[localHeads, remoteHeads, detachedHeads] = [localHeads, remoteHeads, detachedHeads].map((items, i) => {
+				return items.sort(({ name: nameA }, { name: nameB }) => {
+					if (i === 1) {
+						nameA = nameA.replace(/(?:DETACHED - )?.*?\//, "");
+						nameB = nameB.replace(/(?:DETACHED - )?.*?\//, "");
+					}
+					return pinnedBranchesRev.indexOf(nameB) - pinnedBranchesRev.indexOf(nameA);
+				});
+			});
+
+			return [].concat(localHeads, SEPARATOR_ITEM, remoteHeads, SEPARATOR_ITEM, detachedHeads);
 		}
 	}
 
 	const provider = new Provider();
-	const explorer: TreeView<BranchItem> = window.createTreeView("git-branches.gitBranches", {
+	const explorer: TreeView<BranchItem | typeof SEPARATOR_ITEM> = window.createTreeView("git-branches.gitBranches", {
 		treeDataProvider: provider,
 		showCollapseAll: true,
 		canSelectMany: false,

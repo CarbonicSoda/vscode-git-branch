@@ -149,13 +149,10 @@
 						"description": "Branches that would be pinned on top of the view if exists in the order given below.",
 						"default": [
 							"master",
-							"main",
-							"origin/master",
-							"origin/main",
-							"upstream/master",
-							"upstream/main"
+							"main"
 						],
-						"uniqueItems": true
+						"uniqueItems": true,
+						"scope": "resource"
 					},
 					"git-branches.view.defaultExpandBranches": {
 						"order": 104,
