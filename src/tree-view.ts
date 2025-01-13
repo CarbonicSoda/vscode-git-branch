@@ -29,7 +29,7 @@ export namespace GitBranchesTreeView {
 
 	const TIMEOUT_GET_REPO = 10;
 
-	const PINNED_COLOR = VSColors.interpolate("#FFD700");
+	const PINNED_COLOR = VSColors.interpolate("#FFDF00");
 
 	const SEPARATOR_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
 
@@ -222,9 +222,9 @@ export namespace GitBranchesTreeView {
 
 			const expandBranches = localBranches.length + remoteBranches.length === 1 ? "none" : defExpandBranches;
 
-			let localHeads: BranchItem[] = [];
-			let remoteHeads: BranchItem[] = [];
-			let detachedHeads: BranchItem[] = [];
+			let localBranchItems: BranchItem[] = [];
+			let remoteBranchItems: BranchItem[] = [];
+			let detachedBranchItems: BranchItem[] = [];
 			await Aux.async.map([localBranches, remoteBranches], async (branches, i) => {
 				const isRemote = i === 1;
 
@@ -265,29 +265,31 @@ export namespace GitBranchesTreeView {
 					);
 
 					if (isDetached) {
-						detachedHeads.push(item);
+						detachedBranchItems.push(item);
 						return;
 					}
 					if (isRemote) {
-						remoteHeads.push(item);
+						remoteBranchItems.push(item);
 						return;
 					}
-					localHeads.push(item);
+					localBranchItems.push(item);
 				});
 			});
 
 			const pinnedBranchesRev = pinnedBranches.reverse();
-			[localHeads, remoteHeads, detachedHeads] = [localHeads, remoteHeads, detachedHeads].map((items, i) => {
+			[localBranchItems, remoteBranchItems, detachedBranchItems] = [
+				localBranchItems,
+				remoteBranchItems,
+				detachedBranchItems,
+			].map((items) => {
 				return items.sort(({ name: nameA }, { name: nameB }) => {
-					if (i === 1) {
-						nameA = nameA.replace(/(?:DETACHED - )?.*?\//, "");
-						nameB = nameB.replace(/(?:DETACHED - )?.*?\//, "");
-					}
+					nameA = nameA.split("/").at(-1);
+					nameB = nameB.split("/").at(-1);
 					return pinnedBranchesRev.indexOf(nameB) - pinnedBranchesRev.indexOf(nameA);
 				});
 			});
 
-			return [].concat(localHeads, SEPARATOR_ITEM, remoteHeads, SEPARATOR_ITEM, detachedHeads);
+			return [].concat(localBranchItems, SEPARATOR_ITEM, remoteBranchItems, SEPARATOR_ITEM, detachedBranchItems);
 		}
 	}
 
