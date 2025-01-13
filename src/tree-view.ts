@@ -15,6 +15,7 @@ import { API as GitAPI, GitExtension, RefType, Repository } from "./declarations
 import { Janitor } from "./utils/janitor";
 import { ConfigMaid } from "./utils/config-maid";
 import { VSColors } from "./utils/vs-colors";
+import { GitRunner } from "./utils/git-runner";
 
 /**
  * Provides Git Branches view on primary sidebar, main presentation module
@@ -49,12 +50,15 @@ export namespace GitBranchesTreeView {
 	 * Git Branches tree data provider
 	 */
 	class Provider implements TreeDataProvider<BranchItem> {
-		gitAPI: GitAPI;
-		gitEnabled: boolean;
-
-		currentRepo: Repository | null;
+		currRepo: Repository | null;
+		currRepoFsPath?: string;
 
 		items: BranchItem[] = [];
+
+		private gitAPI: GitAPI;
+		private gitPath: string;
+		private gitEnabled: boolean;
+		private gitRunner?: GitRunner;
 
 		private treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
 			void | undefined | BranchItem
@@ -66,14 +70,23 @@ export namespace GitBranchesTreeView {
 		 */
 		async initProvider(): Promise<void> {
 			this.gitAPI = await this.getGitAPI();
+			this.gitPath = this.gitAPI.git.path;
 
 			this.gitEnabled = true;
 			ConfigMaid.onChange("git.enabled", (enabled) => {
 				this.gitEnabled = enabled;
 			});
 
-			this.currentRepo = await this.getPrimaryRepo();
+			this.currRepo = await this.getPrimaryRepo();
 			this.reloadItems();
+
+			//MO DEV
+			if (this.currRepo) {
+				this.currRepoFsPath = this.currRepo.rootUri.fsPath;
+				this.gitRunner = new GitRunner(this.gitPath, this.currRepoFsPath);
+				const test = await this.gitRunner.run("branch", "-l", "-a");
+				console.log(test);
+			}
 		}
 
 		/**
@@ -166,7 +179,7 @@ export namespace GitBranchesTreeView {
 			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
 			const defaultExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
 
-			const branches = await this.currentRepo.getBranches({
+			const branches = await this.currRepo.getBranches({
 				remote: includeRemoteBranches,
 				sort: branchesSortMethod === "Commit Date" ? "committerdate" : "alphabetically",
 			});
@@ -186,7 +199,7 @@ export namespace GitBranchesTreeView {
 				);
 				heads.push(item);
 			}
-			
+
 			const pinnedBranchesRev = pinnedBranches.reverse();
 			return heads.sort(
 				({ name: nameA }, { name: nameB }) =>
