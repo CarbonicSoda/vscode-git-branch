@@ -12,6 +12,7 @@ import {
 } from "vscode";
 import { API as GitAPI, GitExtension, RefType, Repository } from "./declarations/git";
 
+import { Aux } from "./utils/auxiliary";
 import { Janitor } from "./utils/janitor";
 import { ConfigMaid } from "./utils/config-maid";
 import { VSColors } from "./utils/vs-colors";
@@ -185,19 +186,27 @@ export namespace GitBranchesTreeView {
 
 			const expandBranches = branches.length === 1 ? "none" : defaultExpandBranches;
 
-			const heads = [];
-			for (const branch of branches) {
+			const heads: BranchItem[] = [];
+			await Aux.async.map(branches, async (branch) => {
 				const name = branch.name;
 				const isRemote = branch.type === RefType.RemoteHead;
 
+				let noRevision;
+				let latestHash;
+				try {
+					latestHash = (await this.gitRunner.run("rev-parse", "--short", name)).trim();
+				} catch {
+					noRevision = true;
+				}
+
 				const item = new BranchItem(name, expandBranches);
-				item.description = isRemote ? "Remote" : "Local";
+				item.description = `${isRemote ? "Remote" : "Local"}${noRevision ? "" : " - " + latestHash}`;
 				item.iconPath = new ThemeIcon(
 					isRemote ? "github-alt" : "git-branch",
 					pinnedBranches.includes(name) ? PINNED_COLOR : VSColors.hash(name),
 				);
 				heads.push(item);
-			}
+			});
 
 			const pinnedBranchesRev = pinnedBranches.reverse();
 			return heads.sort(
@@ -206,6 +215,7 @@ export namespace GitBranchesTreeView {
 			);
 		}
 	}
+
 	const provider = new Provider();
 	const explorer: TreeView<BranchItem> = window.createTreeView("git-branches.gitBranches", {
 		treeDataProvider: provider,
