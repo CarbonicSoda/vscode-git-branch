@@ -115,6 +115,57 @@
 				"contents": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable this extension powered by Git.\n[Initialize Repository](command:git.init)",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount == 0"
 			}
+		],
+		"configuration": [
+			{
+				"title": "View",
+				"order": 1,
+				"properties": {
+					"git-branches.view.includeRemoteBranches": {
+						"order": 101,
+						"title": "Include Remote Branches",
+						"type": "boolean",
+						"description": "Include remote branches in the view.",
+						"default": true
+					},
+					"git-branches.view.branchesSortMethod": {
+						"order": 102,
+						"title": "Sorting Method for Branches",
+						"type": "string",
+						"description": "Sorting method used to order branches in the view.",
+						"enum": [
+							"Commit Date",
+							"Alphabetic"
+						],
+						"default": "Commit Date"
+					},
+					"git-branches.view.pinnedBranches": {
+						"order": 103,
+						"title": "Pinned Branches",
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Branches that would be pinned on top of the view if exists in the order given below.",
+						"default": [
+							"master",
+							"main",
+							"origin/master",
+							"origin/main",
+							"upstream/master",
+							"upstream/main"
+						],
+						"uniqueItems": true
+					},
+					"git-branches.view.defaultExpandBranches": {
+						"order": 104,
+						"title": "Expand Branches by Default",
+						"type": "boolean",
+						"description": "Expand branches in the view by default.",
+						"default": true
+					}
+				}
+			}
 		]
 	}
 }

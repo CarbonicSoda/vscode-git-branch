@@ -3,43 +3,67 @@ import {
 	TreeDataProvider,
 	EventEmitter,
 	Event,
-	commands,
 	extensions,
 	window,
 	TreeView,
-	workspace,
-	Uri,
-	WorkspaceFolder,
+	TreeItem,
+	TreeItemCollapsibleState,
+	ThemeIcon,
 } from "vscode";
-import { API as GitAPI, GitExtension, Repository } from "./declarations/git";
+import { API as GitAPI, GitExtension, RefType, Repository } from "./declarations/git";
 
-import { Aux } from "./utils/auxiliary";
-import { ConfigMaid } from "./utils/config-maid";
-
-import { GitEngine } from "./git-engine";
-import { TreeItems } from "./tree-items";
 import { Janitor } from "./utils/janitor";
+import { ConfigMaid } from "./utils/config-maid";
+import { VSColors } from "./utils/vs-colors";
 
-//MO TODO git-base.gitEnabled && gitOpenRepositoryCount > 0
-//MO TODO capabilities: unsafe repositories ?
-
-//MO TODO think of what to display when only 1 branch exists
-
-const VSCODE_GIT_API_VERSION = 1;
-const TIMEOUT_GET_REPO = 10;
-
+/**
+ * Provides Git Branches view on primary sidebar, main presentation module
+ */
 export namespace GitBranchesTreeView {
-	class Provider implements TreeDataProvider<TreeItems.Branch> {
+	//#region CONSTANTS
+
+	const VSCODE_GIT_API_VERSION = 1;
+
+	const TIMEOUT_GET_REPO = 10;
+
+	const PINNED_COLOR = VSColors.interpolate("#FFD700");
+
+	//#endregion CONSTANTS
+
+	/**
+	 * Tree item class for a git branch
+	 */
+	class BranchItem extends TreeItem {
+		public children: BranchItem[] = [];
+
+		constructor(public name: string, expand: boolean | "none", public parent?: BranchItem) {
+			let state: TreeItemCollapsibleState;
+			if (expand === "none") state = TreeItemCollapsibleState.None;
+			else state = expand ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed;
+
+			super(name, state);
+		}
+	}
+
+	/**
+	 * Git Branches tree data provider
+	 */
+	class Provider implements TreeDataProvider<BranchItem> {
 		gitAPI: GitAPI;
 		gitEnabled: boolean;
 
-		items: TreeItems.Branch[] = [];
+		currentRepo: Repository | null;
 
-		private treeDataChangeEmitter: EventEmitter<void | undefined | TreeItems.Branch> = new EventEmitter<
-			void | undefined | TreeItems.Branch
+		items: BranchItem[] = [];
+
+		private treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
+			void | undefined | BranchItem
 		>();
-		onDidChangeTreeData: Event<void | undefined | TreeItems.Branch> = this.treeDataChangeEmitter.event;
+		onDidChangeTreeData: Event<void | undefined | BranchItem> = this.treeDataChangeEmitter.event;
 
+		/**
+		 * Init provider and loads tree items
+		 */
 		async initProvider(): Promise<void> {
 			this.gitAPI = await this.getGitAPI();
 
@@ -48,10 +72,8 @@ export namespace GitBranchesTreeView {
 				this.gitEnabled = enabled;
 			});
 
-			const primaryRepo = await this.getPrimaryRepo();
-			if (!primaryRepo) return;
-
-			window.showInformationMessage(primaryRepo.rootUri.path);
+			this.currentRepo = await this.getPrimaryRepo();
+			this.reloadItems();
 		}
 
 		/**
@@ -97,15 +119,15 @@ export namespace GitBranchesTreeView {
 
 		//#region Interface implementation methods
 
-		getTreeItem(element: TreeItems.Branch): TreeItems.Branch {
+		getTreeItem(element: BranchItem): BranchItem {
 			return element;
 		}
 
-		getParent(element: TreeItems.Branch): undefined | TreeItems.Branch {
+		getParent(element: BranchItem): undefined | BranchItem {
 			return element.parent;
 		}
 
-		getChildren(element: TreeItems.Branch | undefined): TreeItems.Branch[] {
+		getChildren(element: BranchItem | undefined): BranchItem[] {
 			if (element) return element.children;
 			return this.items;
 		}
@@ -113,31 +135,19 @@ export namespace GitBranchesTreeView {
 		//#endregion End of interface implementation methods
 
 		/**
-		 * Removes `items` from provider
-		 */
-		removeItems(...items: TreeItems.Branch[]): void {
-			this.items = Aux.array.removeFrom(this.items, ...items);
-		}
-
-		/**
-		 * Removes all items from provider
-		 */
-		removeAllItems(): void {
-			this.items = [];
-		}
-
-		/**
 		 * Updates provider items (does not reload items)
 		 * @param item item to be updated, if not given the whole tree is refreshed
 		 */
-		refresh(item?: TreeItems.Branch): void {
+		refresh(item?: BranchItem): void {
+			if (!this.gitEnabled) return;
 			this.treeDataChangeEmitter.fire(item);
 		}
 
 		/**
 		 * Reloads provider with updated items
 		 */
-		async reloadItems(repo: Repository): Promise<void> {
+		async reloadItems(): Promise<void> {
+			if (!this.gitEnabled) return;
 			this.items = await this.getItems();
 			this.treeDataChangeEmitter.fire();
 		}
@@ -146,101 +156,58 @@ export namespace GitBranchesTreeView {
 		 * Retrieves updates and builds view items
 		 * @returns built items (primary-hierarchy)
 		 */
-		private async getItems(): Promise<TreeItems.Branch[]> {
-			// const expandPrimaryGroup = ConfigMaid.get("view.defaultExpandBranches");
-			// expandPrimaryGroup;
-			return [];
+		private async getItems(): Promise<BranchItem[]> {
+			if (!this.gitEnabled) return [];
 
-			// const tagColors = await MemoEngine.getTagColors();
-			// const inner = Aux.object.group(memos, isFileView ? "fileName" : "tag");
-			// const innerLabels = Object.keys(inner).sort();
-			// const innerItems = innerLabels.map(
-			// 	(label) => new (isFileView ? TreeItems.FileItem : TreeItems.TagItem)(label, expandPrimaryGroup),
-			// );
+			const includeRemoteBranches = <boolean>ConfigMaid.get("git-branches.view.includeRemoteBranches");
+			const branchesSortMethod = <"Commit Date" | "Alphabetic">(
+				ConfigMaid.get("git-branches.view.branchesSortMethod")
+			);
+			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
+			const defaultExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
 
-			// await Aux.async.range(innerLabels.length, async (i) => {
-			// 	const innerLabel = innerLabels[i];
-			// 	const innerItem = innerItems[i];
-			// 	if (!isFileView) innerItem.iconPath = new ThemeIcon("bookmark", tagColors[innerLabel]);
+			const branches = await this.currentRepo.getBranches({
+				remote: includeRemoteBranches,
+				sort: branchesSortMethod === "Commit Date" ? "committerdate" : "alphabetically",
+			});
 
-			// 	const halfLeaves = Aux.object.group(inner[innerLabel], isFileView ? "tag" : "fileName");
-			// 	const halfLeafLabels = Object.keys(halfLeaves).sort();
-			// 	const halfLeafItems: TreeItems.Branch[] = isFileView
-			// 		? halfLeafLabels.map(
-			// 				(label) =>
-			// 					new TreeItems.TagItem(label, expandSecondaryGroup, <TreeItems.FileItem>innerItem),
-			// 		  )
-			// 		: halfLeafLabels.map(
-			// 				(label) =>
-			// 					new TreeItems.FileItem(label, expandSecondaryGroup, <TreeItems.TagItem>innerItem),
-			// 		  );
-			// 	innerItem.children = halfLeafItems;
+			const expandBranches = branches.length === 1 ? "none" : defaultExpandBranches;
 
-			// 	let childMemoCount = 0;
-			// 	await Aux.async.range(innerItem.children.length, async (j) => {
-			// 		const halfLeafItem = <TreeItems.Branch>innerItem.children[j];
-			// 		const halfLeafLabel = halfLeafLabels[j];
-			// 		if (isFileView) halfLeafItem.iconPath = new ThemeIcon("bookmark", tagColors[halfLeafLabel]);
+			const heads = [];
+			for (const branch of branches) {
+				const name = branch.name;
+				const isRemote = branch.type === RefType.RemoteHead;
 
-			// 		let memos = <MemoEngine.Memo[]>halfLeaves[halfLeafLabel];
-			// 		const [important, normal]: MemoEngine.Memo[][] = [[], []];
-			// 		for (const memo of memos) {
-			// 			if (memo.priority !== 0) {
-			// 				important.push(memo);
-			// 				continue;
-			// 			}
-			// 			normal.push(memo);
-			// 		}
-			// 		memos = important.sort((a, b) => b.priority - a.priority).concat(normal);
-			// 		childMemoCount += memos.length;
-
-			// 		halfLeafItem.description = `${memos.length} Memo${Aux.string.plural(memos)}`;
-			// 		halfLeafItem.tooltip = new MarkdownString(
-			// 			`${isFileView ? "Tag: " : "File: *"}${halfLeafItem.label}${isFileView ? "" : "*"} - ${
-			// 				memos.length
-			// 			} $(pencil)`,
-			// 			true,
-			// 		);
-
-			// 		const tagColor = (<ThemeIcon>(isFileView ? halfLeafItem : innerItem).iconPath).color;
-			// 		const maxPriority = Math.max(...memos.map((memo) => memo.priority));
-			// 		const memoItems = await Aux.async.map(
-			// 			memos,
-			// 			async (memo) => new TreeItems.MemoItem(memo, tagColor, halfLeafItem, maxPriority),
-			// 		);
-			// 		halfLeafItem.children = memoItems;
-			// 	});
-
-			// 	innerItem.description = `${halfLeafItems.length} ${isFileView ? "Tag" : "File"}${Aux.string.plural(
-			// 		halfLeafItems,
-			// 	)} > ${childMemoCount} Memo${Aux.string.plural(childMemoCount)}`;
-			// 	innerItem.tooltip = new MarkdownString(
-			// 		`${isFileView ? "File: *" : "Tag: "}${innerItem.label}${isFileView ? "*" : ""} - ${
-			// 			halfLeafItems.length
-			// 		} ${isFileView ? "$(bookmark)" : "$(file)"} ${childMemoCount} $(pencil)`,
-			// 		true,
-			// 	);
-			// });
-
-			// return innerItems;
+				const item = new BranchItem(name, expandBranches);
+				item.description = isRemote ? "Remote" : "Local";
+				item.iconPath = new ThemeIcon(
+					isRemote ? "github-alt" : "git-branch",
+					pinnedBranches.includes(name) ? PINNED_COLOR : VSColors.hash(name),
+				);
+				heads.push(item);
+			}
+			
+			const pinnedBranchesRev = pinnedBranches.reverse();
+			return heads.sort(
+				({ name: nameA }, { name: nameB }) =>
+					pinnedBranchesRev.indexOf(nameB) - pinnedBranchesRev.indexOf(nameA),
+			);
 		}
 	}
 	const provider = new Provider();
-	const explorer: TreeView<TreeItems.Branch> = window.createTreeView("git-branches.gitBranches", {
+	const explorer: TreeView<BranchItem> = window.createTreeView("git-branches.gitBranches", {
 		treeDataProvider: provider,
 		showCollapseAll: true,
 		canSelectMany: false,
 	});
 
 	/**
-	 * Inits Memo Explorer provider, view and event listeners
+	 * Inits Git Branches provider, view and event listeners
 	 */
 	export async function initView(): Promise<void> {
-		// ConfigMaid.onChange("view.defaultView", updateViewType);
 		// ConfigMaid.onChange(
 		// 	["view.defaultExpandPrimaryGroups", "view.defaultExpandSecondaryGroups"],
 		// 	updateExpandState,
-		// );
 
 		Janitor.add(explorer);
 
@@ -269,31 +236,31 @@ export namespace GitBranchesTreeView {
 		// 	commands.registerCommand("git-branches.switchToTagView", () => updateViewType("Tag")),
 		// 	commands.registerCommand("git-branches.completeAllMemos", completeAllMemos),
 
-		// 	commands.registerCommand("git-branches.navigateToFile", (fileItem: TreeItems.FileItem) =>
+		// 	commands.registerCommand("git-branches.navigateToFile", (fileItem: FileItem) =>
 		// 		fileItem.navigateTo(),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeFile", (fileItem: TreeItems.FileItem) =>
+		// 	commands.registerCommand("git-branches.completeFile", (fileItem: FileItem) =>
 		// 		fileItem.markMemosAsCompleted(),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeFileNoConfirm", (fileItem: TreeItems.FileItem) =>
+		// 	commands.registerCommand("git-branches.completeFileNoConfirm", (fileItem: FileItem) =>
 		// 		fileItem.markMemosAsCompleted({ noConfirm: true }),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeTag", (tagItem: TreeItems.TagItem) =>
+		// 	commands.registerCommand("git-branches.completeTag", (tagItem: TagItem) =>
 		// 		tagItem.markMemosAsCompleted(),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeTagNoConfirm", (tagItem: TreeItems.TagItem) =>
+		// 	commands.registerCommand("git-branches.completeTagNoConfirm", (tagItem: TagItem) =>
 		// 		tagItem.markMemosAsCompleted({ noConfirm: true }),
 		// 	),
-		// 	commands.registerCommand("git-branches.navigateToMemo", (memoItem: TreeItems.MemoItem) =>
+		// 	commands.registerCommand("git-branches.navigateToMemo", (memoItem: MemoItem) =>
 		// 		memoItem.navigateTo(),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeMemo", (memoItem: TreeItems.MemoItem) =>
+		// 	commands.registerCommand("git-branches.completeMemo", (memoItem: MemoItem) =>
 		// 		memoItem.markAsCompleted(),
 		// 	),
-		// 	commands.registerCommand("git-branches.confirmCompleteMemo", (memoItem: TreeItems.MemoItem) =>
+		// 	commands.registerCommand("git-branches.confirmCompleteMemo", (memoItem: MemoItem) =>
 		// 		memoItem.markAsCompleted(),
 		// 	),
-		// 	commands.registerCommand("git-branches.completeMemoNoConfirm", (memoItem: TreeItems.MemoItem) =>
+		// 	commands.registerCommand("git-branches.completeMemoNoConfirm", (memoItem: MemoItem) =>
 		// 		memoItem.markAsCompleted({ noConfirm: true }),
 		// 	),
 		// );
@@ -318,14 +285,14 @@ export namespace GitBranchesTreeView {
 	//  * Updates provider items (does not reload items)
 	//  * @param item item to be updated, if not given the whole tree is refreshed
 	//  */
-	// export function refresh(item?: TreeItems.Branch): void {
+	// export function refresh(item?: Branch): void {
 	// 	provider.refresh(item);
 	// }
 
 	// /**
 	//  * Removes `items` from treeview
 	//  */
-	// export function removeItems(...items: TreeItems.Branch[]): void {
+	// export function removeItems(...items: Branch[]): void {
 	// 	provider.removeItems(...items);
 	// }
 
