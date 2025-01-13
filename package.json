@@ -1,0 +1,120 @@
+{
+	"name": "git-branches",
+	"displayName": "Git Branches",
+	"description": "Convenient Inspector for Git Branches",
+	"version": "1.0.0",
+	"publisher": "carbonsoda",
+	"author": {
+		"name": "David W."
+	},
+	"homepage": "https://marketplace.visualstudio.com/items?itemName=carbonsoda.git-branches",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/CarbonicSoda/vscode-git-branches"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/CarbonicSoda/vscode-git-branches/issues",
+		"email": "carbonsoda@outlook.com"
+	},
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"keywords": [
+		"git",
+		"merge",
+		"rebase",
+		"checkout",
+		"delete",
+		"branch",
+		"status"
+	],
+	"categories": [
+		"SCM Providers"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"icon": "media/icon.png",
+	"main": "./dist/extension",
+	"extensionDependencies": [
+		"vscode.git-base",
+		"vscode.git"
+	],
+	"scripts": {
+		"vscode:prepublish": "webpack --mode production",
+		"compile": "webpack",
+		"watch": "tsc --watch -p ./",
+		"webpack-dev": "webpack --mode development --watch",
+		"webpack": "webpack --mode development",
+		"package": "webpack --mode production --devtool hidden-source-map",
+		"pretest": "npm run compile-tests && npm run compile && npm run lint",
+		"lint": "eslint src"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.8",
+		"@types/node": "20.x",
+		"@types/vscode": "^1.80.0",
+		"@typescript-eslint/eslint-plugin": "^8.7.0",
+		"@typescript-eslint/parser": "^8.7.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1",
+		"eslint": "^9.11.1",
+		"ts-loader": "^9.5.1",
+		"typescript": "^5.6.2",
+		"webpack": "^5.95.0",
+		"webpack-cli": "^5.1.4"
+	},
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": false
+		}
+	},
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "gitBranches",
+					"title": "Git Branches",
+					"icon": "$(symbol-class)"
+				}
+			]
+		},
+		"views": {
+			"gitBranches": [
+				{
+					"id": "git-branches.gitBranches",
+					"name": "Git Branches"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "Git is not enabled or not installed. Install and enable Git to use this extension.",
+				"when": "!config.git.enabled || git.missing"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "You have not yet opened a repository.\n[Open Folder](command:workbench.action.files.openFolder)\n[Clone Repository](command:git.clone)\nOpening a folder will close all currently open editors. To keep them open, [add a folder](command:workbench.action.addRootFolder) instead.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount == 0 && openFolderWorkspaceSupport"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "You have not yet opened a repository.\n[Open Folder](command:workbench.action.files.openFolderViaWorkspace)\n[Clone Repository](command:git.clone)\nOpening a folder will close all currently open editors. To keep them open, [add a folder](command:workbench.action.addRootFolder) instead.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount == 0 && !openFolderWorkspaceSupport && workbenchState == workspace"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "Waiting for Git to initialize...",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state != initialized"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable this extension powered by Git.\n[Initialize Repository](command:git.init)",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount == 0"
+			}
+		]
+	}
+}
