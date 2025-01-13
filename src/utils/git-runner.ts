@@ -4,22 +4,30 @@ export class GitRunner {
 	constructor(public gitPath: string, public repoPath: string) {}
 
 	async run(command: string, ...args: string[]): Promise<string> {
-		const buffer = await new Promise<Buffer>((res, rej) => {
+		return await new Promise((res, rej) => {
 			const process = spawn(this.gitPath, [command].concat(args), { cwd: this.repoPath });
+			process.stdout.setEncoding("utf8");
+			process.stderr.setEncoding("utf8");
 
+			let output = "";
+			let error = "";
 			process.stdout.on("data", (data) => {
-				res(data);
-				process.kill();
+				output += data;
 			});
 			process.stderr.on("data", (err) => {
-				rej(err);
-				process.kill();
+				error += err;
 			});
+
+			process.on("close", (code) => {
+				if (error === "" && code === 0) {
+					return res(output);
+				}
+				rej(`Git Runner closed with error code ${code}: ${error}`);
+			});
+
 			process.on("error", (err) => {
 				rej(err);
-				process.kill();
 			});
 		});
-		return buffer.toString("utf8");
 	}
 }

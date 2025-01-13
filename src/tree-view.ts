@@ -80,13 +80,12 @@ export namespace GitBranchesTreeView {
 			this.currRepo = await this.getPrimaryRepo();
 			this.reloadItems();
 
-			//MO DEV
 			if (this.currRepo) {
 				this.currRepoFsPath = this.currRepo.rootUri.fsPath;
 				this.gitRunner = new GitRunner(this.gitPath, this.currRepoFsPath);
-				const test = await this.gitRunner.run("branch", "-l", "-a");
-				console.log(test);
 			}
+
+			//MO TODO both shall be updated on currRepo update
 		}
 
 		/**
