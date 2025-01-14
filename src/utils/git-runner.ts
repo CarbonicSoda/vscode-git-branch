@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { execFile } from "node:child_process";
 
 import { Aux } from "./auxiliary";
 
@@ -18,28 +18,10 @@ export class GitRunner {
 
 	async run(command: string, ...args: string[]): Promise<string> {
 		return await new Promise((res, rej) => {
-			const process = spawn(this.gitPath, [command].concat(args), { cwd: this.repoPath });
-			process.stdout.setEncoding("utf8");
-			process.stderr.setEncoding("utf8");
-
-			let output = "";
-			let error = "";
-			process.stdout.on("data", (data) => {
-				output += data;
-			});
-			process.stderr.on("data", (err) => {
-				error += err;
-			});
-
-			process.on("close", (code) => {
-				if (error === "" && code === 0) {
-					return res(output.trim());
-				}
-				rej(`Git Runner closed with error code ${code}: ${error.trim()}`);
-			});
-
-			process.on("error", (err) => {
-				rej(err);
+			execFile(this.gitPath, [command].concat(args), { cwd: this.repoPath }, (err, stdout, stderr) => {
+				if (err) return rej(err);
+				if (stderr) return rej(stderr);
+				res(stdout.trim());
 			});
 		});
 	}
@@ -95,7 +77,6 @@ export class GitRunner {
 		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
 	}
 
-	//MO PROF 1638ms total
 	async getBranchDiff(
 		branch1: Branch,
 		branch2: Branch,
@@ -114,7 +95,6 @@ export class GitRunner {
 		};
 	}
 
-	//MO PROF 586ms total
 	async getMergeBaseHash(branch1: Branch, branch2: Branch, options?: { short?: boolean }): Promise<string> {
 		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
 		if (options?.short) hash = hash.slice(0, 7);

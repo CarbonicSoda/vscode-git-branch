@@ -32,9 +32,7 @@
 	"categories": [
 		"SCM Providers"
 	],
-	"activationEvents": [
-		"onStartupFinished"
-	],
+	"activationEvents": [],
 	"icon": "media/icon.png",
 	"main": "./dist/extension",
 	"extensionDependencies": [
@@ -117,7 +115,7 @@
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "Fetching data from Git...\n\nIf your repository contains many branches this may take a while, please be patient.",
+				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.init"
 			}
 		],
