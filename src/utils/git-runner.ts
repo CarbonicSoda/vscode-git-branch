@@ -55,6 +55,7 @@ export class GitRunner {
 		const res = await this.run("branch", `-${type[0]}`);
 		const branches = [];
 		for (let line of res.split("\n")) {
+			if (line.includes("HEAD -> ")) continue;
 			line = line
 				.replaceAll(/[\(\)\*]/g, "")
 				.replace(/.*? -> /, "")

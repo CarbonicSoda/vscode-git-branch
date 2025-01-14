@@ -220,11 +220,11 @@ export namespace GitBranchesTreeView {
 				} catch {
 					noRevision = true;
 				}
-				item.description = `${Aux.string.capital(branch.id)}${noRevision ? "" : " - " + latestHash}`;
+				item.description = `${Aux.string.capital(branch.type)}${noRevision ? "" : " - " + latestHash}`;
 
 				const lastUpdated = await this.gitRunner?.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
-					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${Aux.string.capital(branch.id)}  \n${
+					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.id}  \n${
 						noRevision ? "No Revision" : "Latest: " + latestHash
 					}  \nUpdated ${lastUpdated}`,
 					true,
