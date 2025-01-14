@@ -95,6 +95,7 @@ export class GitRunner {
 		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
 	}
 
+	//MO PROF 1638ms total
 	async getBranchDiff(
 		branch1: Branch,
 		branch2: Branch,
@@ -113,6 +114,7 @@ export class GitRunner {
 		};
 	}
 
+	//MO PROF 586ms total
 	async getMergeBaseHash(branch1: Branch, branch2: Branch, options?: { short?: boolean }): Promise<string> {
 		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
 		if (options?.short) hash = hash.slice(0, 7);

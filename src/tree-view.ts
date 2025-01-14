@@ -268,7 +268,6 @@ export namespace GitBranchesTreeView {
 					child.description = `${Aux.string.capital(childBranch.type)} - ${
 						isMerged ? `Merged` : "↓" + branchDiff.from
 					} ↑${branchDiff.to}`;
-					console.log((<MarkdownString>item.tooltip).value);
 					child.tooltip = new MarkdownString(
 						`${(<MarkdownString>item.tooltip).value}\n\n${
 							isMerged ? `Fully Merged` : "From $(arrow-down) _" + branchDiff.from + "_"
