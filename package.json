@@ -32,9 +32,7 @@
 	"categories": [
 		"SCM Providers"
 	],
-	"activationEvents": [
-		"onStartupFinished"
-	],
+	"activationEvents": [],
 	"icon": "media/icon.png",
 	"main": "./dist/extension",
 	"extensionDependencies": [
@@ -114,6 +112,11 @@
 				"view": "git-branches.gitBranches",
 				"contents": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable this extension powered by Git.\n[Initialize Repository](command:git.init)",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount == 0"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "Fetching data from Git...\n\nIf your repository contains many branches this may take a while, please be patient.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.init"
 			}
 		],
 		"configuration": [
