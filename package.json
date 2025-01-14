@@ -121,21 +121,6 @@
 				"title": "View",
 				"order": 1,
 				"properties": {
-					"git-branches.view.defaultMode": {
-						"order": 101,
-						"title": "Default branch check mode.",
-						"type": "string",
-						"enum": [
-							"Contains",
-							"Merged"
-						],
-						"enumDescriptions": [
-							"Check if the branch contains the latest version of other branches.",
-							"Check if the latest version of the branch is merged into other branches."
-						],
-						"description": "Default branch checking mode in the view.",
-						"default": "Contains"
-					},
 					"git-branches.view.includeRemoteBranches": {
 						"order": 101,
 						"title": "Include Remote Branches",

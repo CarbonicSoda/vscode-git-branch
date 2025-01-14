@@ -181,8 +181,6 @@ export namespace GitBranchesTreeView {
 		 */
 		private async getItems(): Promise<(BranchItem | typeof SEPARATOR_ITEM)[]> {
 			//#region CONFIGS
-			const defMode = (<"Contains" | "Merged">ConfigMaid.get("git-branches.view.defaultMode")).toLowerCase();
-
 			const includeRemoteBranches = <boolean>ConfigMaid.get("git-branches.view.includeRemoteBranches");
 
 			const branchesSortMethod =
@@ -197,8 +195,8 @@ export namespace GitBranchesTreeView {
 
 			//#region COLORS
 			const PINNED_COLOR = VSColors.interpolate("#FFDF00");
-			const GOOD_COLOR = VSColors.interpolate("#0F0");
-			const BAD_COLOR = VSColors.interpolate("#F00");
+			const MERGED_COLOR = VSColors.interpolate("#0F0");
+			const UNMERGED_COLOR = VSColors.interpolate("#F00");
 			//#endregion COLORS
 
 			const branches = await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
@@ -233,9 +231,9 @@ export namespace GitBranchesTreeView {
 
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
-					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.id}  \n${
-						noRevision ? "No Revision" : "Latest Commit: " + latestHash
-					}  \nUpdated ${lastUpdated}`,
+					`$(${iconId}) ${Aux.string.capital(branch.type)} - _${branch.id}_  \n${
+						noRevision ? "No Revision" : "Latest Commit __" + latestHash + "__"
+					}  \nUpdated _${lastUpdated}_`,
 					true,
 				);
 
@@ -252,44 +250,47 @@ export namespace GitBranchesTreeView {
 				});
 			});
 
-			const items = [].concat(localItems, remoteItems, detachedItems);
+			const items: BranchItem[] = [].concat(localItems, remoteItems, detachedItems);
 			await Aux.async.map(items, async (item) => {
-				const branch = item.branch;
+				const parentBranch = item.branch;
 
-				const goodBranches = (
-					await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
-						//MO TODO mode could be altered in tree, mode ?? defMode would be better
-						flags: [`--${defMode}`, branch.ref],
-					})
-				).map((branch) => branch.ref);
-
-				let goodItems: BranchItem[] = [];
-				let badItems: BranchItem[] = [];
+				let mergedItems: BranchItem[] = [];
+				let unmergedItems: BranchItem[] = [];
 				await Aux.async.map(items, async (item) => {
-					const _branch = item.branch;
-					if (_branch === branch) return;
+					const childBranch = item.branch;
+					if (childBranch === parentBranch) return;
 
-					const _item = new BranchItem(_branch, "none");
-					_item.description = item.description;
-					//MO TODO maybe add something else to info user
-					//MO TODO probably commits away from merge base?
-					//MO TODO use git rev-list --count <some-command-yet-to-decide>
-					_item.tooltip = item.tooltip;
-					_item.collapsibleState = TreeItemCollapsibleState.None;
+					const child = new BranchItem(childBranch, "none");
 
-					if (goodBranches.includes(_branch.ref)) {
-						_item.iconPath = new ThemeIcon("check", GOOD_COLOR);
-						goodItems.push(_item);
+					const branchDiff = await this.gitRunner.getBranchDiff(childBranch, parentBranch);
+					const isMerged = branchDiff.from === 0;
+					const mergeBase = await this.gitRunner.getMergeBaseHash(childBranch, parentBranch, { short: true });
+
+					child.description = `${isMerged ? `Merged` : "↓" + branchDiff.from} ↑${branchDiff.to}`;
+					console.log((<MarkdownString>item.tooltip).value);
+					child.tooltip = new MarkdownString(
+						`${(<MarkdownString>item.tooltip).value}\n\n${
+							isMerged ? `Fully Merged` : "From $(arrow-down) _" + branchDiff.from + "_"
+						} __-__ To $(arrow-up) _${branchDiff.to}_ ${
+							isMerged ? "" : " __-__ Sym $(arrow-swap) _" + branchDiff.sym + "_"
+						}  \nMerge Base __${mergeBase}__`,
+						true,
+					);
+					child.collapsibleState = TreeItemCollapsibleState.None;
+
+					if (isMerged) {
+						child.iconPath = new ThemeIcon("check", MERGED_COLOR);
+						mergedItems.push(child);
 						return;
 					}
-					_item.iconPath = new ThemeIcon("x", BAD_COLOR);
-					badItems.push(_item);
+					child.iconPath = new ThemeIcon("x", UNMERGED_COLOR);
+					unmergedItems.push(child);
 				});
 
 				item.children = [].concat(
-					goodItems,
-					...(goodItems.length > 0 && badItems.length > 0 ? [SEPARATOR_ITEM] : []),
-					badItems,
+					mergedItems,
+					...(mergedItems.length > 0 && unmergedItems.length > 0 ? [SEPARATOR_ITEM] : []),
+					unmergedItems,
 					SEPARATOR_ITEM,
 				);
 			});

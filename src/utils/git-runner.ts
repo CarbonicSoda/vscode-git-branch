@@ -94,4 +94,28 @@ export class GitRunner {
 	): Promise<string> {
 		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
 	}
+
+	async getBranchDiff(
+		branch1: Branch,
+		branch2: Branch,
+	): Promise<{
+		from: number;
+		to: number;
+		sym: number;
+	}> {
+		const resFrom = this.run("rev-list", "--count", `${branch1.ref}..${branch2.ref}`);
+		const resTo = this.run("rev-list", "--count", `${branch2.ref}..${branch1.ref}`);
+		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => Number(res.trim()));
+		return {
+			from,
+			to,
+			sym: from + to,
+		};
+	}
+
+	async getMergeBaseHash(branch1: Branch, branch2: Branch, options?: { short?: boolean }): Promise<string> {
+		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
+		if (options?.short) hash = hash.slice(0, 7);
+		return hash;
+	}
 }
