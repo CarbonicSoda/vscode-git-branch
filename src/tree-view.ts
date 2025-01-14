@@ -1,5 +1,4 @@
 import {
-	Extension,
 	TreeDataProvider,
 	EventEmitter,
 	Event,
@@ -17,7 +16,7 @@ import { Aux } from "./utils/auxiliary";
 import { Janitor } from "./utils/janitor";
 import { ConfigMaid } from "./utils/config-maid";
 import { VSColors } from "./utils/vs-colors";
-import { GitRunner } from "./utils/git-runner";
+import { Branch, GitRunner } from "./utils/git-runner";
 
 /**
  * Provides Git Branches view on primary sidebar, main presentation module
@@ -39,14 +38,18 @@ export namespace GitBranchesTreeView {
 	 * Tree item class for a git branch
 	 */
 	class BranchItem extends TreeItem {
-		public children: BranchItem[] = [];
+		type: "local" | "remote" | "detached";
 
-		constructor(public name: string, expand: boolean | "none", public parent?: BranchItem) {
-			let state: TreeItemCollapsibleState;
-			if (expand === "none") state = TreeItemCollapsibleState.None;
-			else state = expand ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed;
+		children: BranchItem[] = [];
 
-			super(name, state);
+		constructor(public branch: Branch, expand: "expand" | "collapse" | "none", public parent?: BranchItem) {
+			const state = {
+				expand: TreeItemCollapsibleState.Expanded,
+				collapse: TreeItemCollapsibleState.Collapsed,
+				none: TreeItemCollapsibleState.None,
+			}[expand];
+			super(branch.id, state);
+			this.type = branch.type;
 		}
 	}
 
@@ -54,115 +57,92 @@ export namespace GitBranchesTreeView {
 	 * Git Branches tree data provider
 	 */
 	class Provider implements TreeDataProvider<BranchItem | typeof SEPARATOR_ITEM> {
-		currRepo: Repository | null;
-		currRepoFsPath?: string;
-
 		items: (BranchItem | typeof SEPARATOR_ITEM)[] = [];
 
-		private gitAPI: GitAPI;
-		//MO TODO monitor git.path change
-		private gitPath: string;
-		private gitEnabled: boolean;
-		private gitRunner?: GitRunner;
-
-		private treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
+		treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
 			void | undefined | BranchItem
 		>();
 		onDidChangeTreeData: Event<void | undefined | BranchItem> = this.treeDataChangeEmitter.event;
 
+		gitExtension: GitExtension;
+
+		gitExtensionAPI?: GitAPI;
+		gitPath?: string;
+		gitRunner?: GitRunner;
+
+		currRepo?: Repository;
+		repoListener?: number;
+
 		get enabled(): boolean {
-			return this.gitEnabled && this.gitRunner !== undefined;
+			return this.gitEnabled && this.currRepo !== undefined;
+		}
+		get gitEnabled(): boolean {
+			return ConfigMaid.get("git.enabled");
 		}
 
-		/**
-		 * Init provider and loads tree items
-		 */
 		async initProvider(): Promise<void> {
-			await this.updateGitAPI();
-			this.gitEnabled = true;
+			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
 
-			ConfigMaid.onChange("git.enabled", (enabled) => {
-				this.gitEnabled = enabled;
+			ConfigMaid.onChange("git", () => {
+				Janitor.clear(this.repoListener);
+				if (this.gitEnabled) this.updateGitAPI();
+				else {
+					this.items = [];
+					this.refresh();
+					this.gitExtensionAPI = this.gitPath = this.gitRunner = this.currRepo = undefined;
+				}
 			});
-			ConfigMaid.onChange("git.path", this.updateGitAPI);
 
-			Janitor.add(
-				this.gitAPI.onDidCloseRepository(async (repo) => {
-					if (repo !== this.currRepo) return;
-					await this.updateCurrRepo();
-				}),
-			);
-
-			await this.updateCurrRepo();
-			await this.reloadItems();
-		}
-
-		/**
-		 * Never resolves if Git/vscode.git is not enabled
-		 * @returns GitAPI of vscode.git
-		 */
-		async getGitAPI(): Promise<GitAPI> {
-			const gitExtension = await new Promise<Extension<GitExtension>>((res) => {
-				const extension = extensions.getExtension<GitExtension>("vscode.git");
-				if (extension) return res(extension);
-
-				const retriever = extensions.onDidChange(() => {
-					const extension = extensions.getExtension<GitExtension>("vscode.git");
-					if (extension) {
-						retriever.dispose();
-						res(extension);
-					}
-				});
-			});
-			return gitExtension.exports.getAPI(VSCODE_GIT_API_VERSION);
+			if (this.gitEnabled) await this.updateGitAPI();
 		}
 
 		async updateGitAPI(): Promise<void> {
-			this.gitAPI = await this.getGitAPI();
-			this.gitPath = this.gitAPI.git.path;
+			if (!this.gitExtension.enabled) {
+				await new Promise<void>((res) => {
+					const once = this.gitExtension.onDidChangeEnablement(() => {
+						once.dispose();
+						res();
+					});
+				});
+			}
+			this.gitExtensionAPI = this.gitExtension.getAPI(VSCODE_GIT_API_VERSION);
+			this.gitPath = this.gitExtensionAPI.git.path;
+
+			this.repoListener = Janitor.add(
+				this.gitExtensionAPI.onDidOpenRepository((repo) => {
+					if (this.currRepo) return;
+					this.currRepo = repo;
+					this.updateGitRunner();
+				}),
+			);
+			this.currRepo = await this.getPrimaryRepo();
+			if (this.currRepo) await this.updateGitRunner();
+		}
+
+		async updateGitRunner(): Promise<void> {
+			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
+			await this.reloadItems();
 		}
 
 		/**
 		 * Resolves after {@link TIMEOUT_GET_REPO} seconds if primary repo cant be found
 		 * @returns Primary repository of workspace or null if not found
 		 */
-		async getPrimaryRepo(): Promise<Repository | null> {
+		async getPrimaryRepo(): Promise<Repository | undefined> {
 			return await new Promise((res) => {
-				const repo = this.gitAPI.repositories[0];
+				const repo = this.gitExtensionAPI.repositories[0];
 				if (repo) return res(repo);
 
-				const once = this.gitAPI.onDidOpenRepository((repo) => {
+				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
 					clearTimeout(timeout);
 					once.dispose();
 					res(repo);
 				});
 				const timeout = setTimeout(() => {
 					once.dispose();
-					res(null);
+					res(undefined);
 				}, TIMEOUT_GET_REPO * 1000);
 			});
-		}
-
-		async updateCurrRepo(): Promise<void> {
-			this.currRepo = await new Promise((res) => {
-				const check = async () => {
-					const repo = await this.getPrimaryRepo();
-					if (repo) {
-						listener.dispose();
-						return res(repo);
-					}
-					setTimeout(check, 1000);
-				};
-				check();
-
-				const listener = this.gitAPI.onDidOpenRepository((repo) => {
-					listener.dispose();
-					res(repo);
-				});
-			});
-
-			this.currRepoFsPath = this.currRepo.rootUri.fsPath;
-			this.gitRunner = new GitRunner(this.gitPath, this.currRepoFsPath);
 		}
 
 		//#region Interface implementation methods
@@ -187,7 +167,6 @@ export namespace GitBranchesTreeView {
 		 * @param item item to be updated, if not given the whole tree is refreshed
 		 */
 		refresh(item?: BranchItem): void {
-			if (!this.enabled) return;
 			this.treeDataChangeEmitter.fire(item);
 		}
 
@@ -205,8 +184,6 @@ export namespace GitBranchesTreeView {
 		 * @returns built items (primary-hierarchy)
 		 */
 		private async getItems(): Promise<(BranchItem | typeof SEPARATOR_ITEM)[]> {
-			if (!this.enabled) return;
-
 			const includeRemoteBranches = <boolean>ConfigMaid.get("git-branches.view.includeRemoteBranches");
 			const branchesSortMethod =
 				<"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.view.branchesSortMethod") === "Commit Date"
@@ -215,81 +192,68 @@ export namespace GitBranchesTreeView {
 			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
 			const defExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
 
-			const localBranches = await this.gitRunner.getBranches("local", { sort: branchesSortMethod });
-			const remoteBranches = includeRemoteBranches
-				? await this.gitRunner.getBranches("remote", { sort: branchesSortMethod })
-				: [];
+			const branches = await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
+				sort: branchesSortMethod,
+			});
+			const expandBranches = branches.length === 1 ? "none" : defExpandBranches ? "expand" : "collapse";
 
-			const expandBranches = localBranches.length + remoteBranches.length === 1 ? "none" : defExpandBranches;
+			let localItems: BranchItem[] = [];
+			let remoteItems: BranchItem[] = [];
+			let detachedItems: BranchItem[] = [];
+			await Aux.async.map(branches, async (branch) => {
+				const item = new BranchItem(branch, expandBranches);
 
-			let localBranchItems: BranchItem[] = [];
-			let remoteBranchItems: BranchItem[] = [];
-			let detachedBranchItems: BranchItem[] = [];
-			await Aux.async.map([localBranches, remoteBranches], async (branches, i) => {
-				const isRemote = i === 1;
+				const iconId = {
+					local: "git-branch",
+					remote: "github-alt",
+					detached: "git-pull-request-draft",
+				}[branch.type];
+				item.iconPath = new ThemeIcon(
+					iconId,
+					pinnedBranches.includes(branch.name) ? PINNED_COLOR : VSColors.hash(branch.id),
+				);
 
-				return await Aux.async.map(branches, async (branch) => {
-					let colorHashString = branch;
+				let noRevision;
+				let latestHash;
+				try {
+					latestHash = await this.gitRunner?.getLatestHash(branch, { short: true });
+				} catch {
+					noRevision = true;
+				}
+				item.description = `${Aux.string.capital(branch.id)}${noRevision ? "" : " - " + latestHash}`;
 
-					const isDetached = branch.startsWith("DETACHED:");
-					if (isDetached) branch = branch.replace(/DETACHED:/, "");
+				const lastUpdated = await this.gitRunner?.getUpdatedTime(branch, "local");
+				item.tooltip = new MarkdownString(
+					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${Aux.string.capital(branch.id)}  \n${
+						noRevision ? "No Revision" : "Latest: " + latestHash
+					}  \nUpdated ${lastUpdated}`,
+					true,
+				);
 
-					const item = new BranchItem(branch, expandBranches);
+				({
+					local: localItems,
+					remote: remoteItems,
+					detached: detachedItems,
+				})[branch.type].push(item);
+			});
 
-					let noRevision;
-					let latestHash;
-					try {
-						latestHash = await this.gitRunner.getLatestHash(branch, { short: true });
-					} catch {
-						noRevision = true;
-					}
-
-					const type = isDetached ? "Detached" : isRemote ? "Remote" : "Local";
-					colorHashString += type;
-					item.description = `${type}${noRevision ? "" : " - " + latestHash}`;
-
-					const icon = isDetached ? "git-pull-request-draft" : isRemote ? "github-alt" : "git-branch";
-					item.iconPath = new ThemeIcon(
-						icon,
-						pinnedBranches.includes(branch.split("/").at(-1))
-							? PINNED_COLOR
-							: VSColors.hash(colorHashString),
-					);
-
-					const lastUpdated = await this.gitRunner.getUpdatedTime(branch, isRemote, isDetached, "local");
-					item.tooltip = new MarkdownString(
-						`$(${icon}) ${type} - ${branch}  \n${
-							noRevision ? "No Revision" : "Latest: " + latestHash
-						}  \nUpdated ${lastUpdated}`,
-						true,
-					);
-
-					if (isDetached) {
-						detachedBranchItems.push(item);
-						return;
-					}
-					if (isRemote) {
-						remoteBranchItems.push(item);
-						return;
-					}
-					localBranchItems.push(item);
+			const pinnedReversed = pinnedBranches.reverse();
+			[localItems, remoteItems, detachedItems] = [localItems, remoteItems, detachedItems].map((items) => {
+				return items.sort((a, b) => {
+					return pinnedReversed.indexOf(b.branch.name) - pinnedReversed.indexOf(a.branch.name);
 				});
 			});
 
-			const pinnedBranchesRev = pinnedBranches.reverse();
-			[localBranchItems, remoteBranchItems, detachedBranchItems] = [
-				localBranchItems,
-				remoteBranchItems,
-				detachedBranchItems,
-			].map((items) => {
-				return items.sort(({ name: nameA }, { name: nameB }) => {
-					nameA = nameA.split("/").at(-1);
-					nameB = nameB.split("/").at(-1);
-					return pinnedBranchesRev.indexOf(nameB) - pinnedBranchesRev.indexOf(nameA);
-				});
-			});
-
-			return [].concat(localBranchItems, SEPARATOR_ITEM, remoteBranchItems, SEPARATOR_ITEM, detachedBranchItems);
+			return [].concat(
+				localItems,
+				...(localItems.length > 0 && remoteItems.length > 0 ? [SEPARATOR_ITEM] : []),
+				remoteItems,
+				...(remoteItems.length > 0 && detachedItems.length > 0 ? [SEPARATOR_ITEM] : []),
+				...(remoteItems.length === 0 && localItems.length > 0 && detachedItems.length > 0
+					? [SEPARATOR_ITEM]
+					: []),
+				detachedItems,
+			);
 		}
 	}
 
@@ -365,6 +329,7 @@ export namespace GitBranchesTreeView {
 		// );
 
 		// await provider.initProvider();
+		//MO TODO add loading welcome view
 		// commands.executeCommand("setContext", "git-branches.explorerInitFinished", true);
 
 		// const editor = window.activeTextEditor;

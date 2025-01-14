@@ -2,6 +2,17 @@ import { spawn } from "child_process";
 
 import { Aux } from "./auxiliary";
 
+export class Branch {
+	ref: string;
+	name: string;
+
+	//MO NOTE do note that detached HEADs are technically not a branch
+	constructor(public id: string, public type: "local" | "remote" | "detached") {
+		this.ref = `${type === "detached" ? "" : type === "local" ? "refs/heads/" : "refs/remotes/"}${id}`;
+		this.name = id.split("/").at(-1);
+	}
+}
+
 export class GitRunner {
 	constructor(public gitPath: string, public repoPath: string) {}
 
@@ -33,55 +44,50 @@ export class GitRunner {
 		});
 	}
 
-	async getBranches(type: "local" | "remote", options?: { sort?: "date" | "alphabet" }): Promise<string[]> {
+	async getBranches(type: "local" | "remote" | "all", options?: { sort?: "date" | "alphabet" }): Promise<Branch[]> {
+		if (type === "all") {
+			const branches = await Aux.async.map(["local", "remote"], async (type: "local" | "remote") =>
+				this.getBranches(type, options),
+			);
+			return branches.flat();
+		}
+
 		const res = await this.run("branch", `-${type[0]}`);
-		let branches = res.split("\n").map((line) =>
-			line
+		const branches = [];
+		for (let line of res.split("\n")) {
+			line = line
 				.replaceAll(/[\(\)\*]/g, "")
-				.replace(/HEAD detached (?:from|at) /, "DETACHED:")
-				.trim(),
-		);
+				.replace(/.*? -> /, "")
+				.trim();
+			if (line.startsWith("HEAD detached")) {
+				line = line.replace(/HEAD detached (?:from|at) /, "");
+				branches.push(new Branch(line, "detached"));
+				continue;
+			}
+			branches.push(new Branch(line, type));
+		}
 
-		if (options?.sort) branches.sort();
+		if (options?.sort) branches.sort((a, b) => a.id.localeCompare(b.id));
 		if (options?.sort === "date") {
-			const timestamps: { [branch: string]: number } = {};
-			await Aux.async.map(branches, async (branch) => {
-				const isDetached = branch.startsWith("DETACHED:");
-				if (isDetached) branch = branch.replace(/DETACHED:/, "");
-
-				timestamps[branch] = parseInt(
-					await this.run(
-						"log",
-						"-1",
-						"--format=%cd",
-						"--date=unix",
-						`${type === "remote" || isDetached ? "" : "refs/heads/"}${branch}`,
-					),
-				);
+			const timestamps: { [branchName: string]: number } = {};
+			await Aux.async.map(branches, async ({ id: name, ref }) => {
+				timestamps[name] = parseInt(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
 			});
-			branches.sort((a, b) => timestamps[b] - timestamps[a]);
+			branches.sort((a, b) => timestamps[b.id] - timestamps[a.id]);
 		}
 
 		return branches;
 	}
 
-	async getLatestHash(branch: string, options?: { short?: boolean }): Promise<string> {
+	async getLatestHash(branch: Branch, options?: { short?: boolean }): Promise<string> {
 		const optArgs = options?.short ? ["--short"] : [];
-		return await this.run("rev-parse", ...optArgs, branch);
+		return await this.run("rev-parse", ...optArgs, branch.ref);
 	}
 
 	async getUpdatedTime(
-		branch: string,
-		isRemote: boolean,
-		isDetached: boolean,
+		branch: Branch,
 		format: "default" | "relative" | "local" | "iso" | "rfc" = "default",
 	): Promise<string> {
-		return await this.run(
-			"log",
-			"-1",
-			"--format=%cd",
-			`--date=${format}`,
-			`${isRemote || isDetached ? "" : "refs/heads/"}${branch}`,
-		);
+		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
 	}
 }
