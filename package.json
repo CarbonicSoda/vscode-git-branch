@@ -32,7 +32,9 @@
 	"categories": [
 		"SCM Providers"
 	],
-	"activationEvents": [],
+	"activationEvents": [
+		"onStartupFinished"
+	],
 	"icon": "media/icon.png",
 	"main": "./dist/extension",
 	"extensionDependencies": [
