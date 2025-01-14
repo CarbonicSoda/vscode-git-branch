@@ -44,7 +44,10 @@ export class GitRunner {
 		});
 	}
 
-	async getBranches(type: "local" | "remote" | "all", options?: { sort?: "date" | "alphabet" }): Promise<Branch[]> {
+	async getBranches(
+		type: "local" | "remote" | "all",
+		options?: { flags?: string[]; sort?: "date" | "alphabet" },
+	): Promise<Branch[]> {
 		if (type === "all") {
 			const branches = await Aux.async.map(["local", "remote"], async (type: "local" | "remote") =>
 				this.getBranches(type, options),
@@ -52,8 +55,8 @@ export class GitRunner {
 			return branches.flat();
 		}
 
-		const res = await this.run("branch", `-${type[0]}`);
-		const branches = [];
+		const res = await this.run("branch", `-${type[0]}`, ...(options?.flags ?? []));
+		let branches = [];
 		for (let line of res.split("\n")) {
 			if (line.includes("HEAD -> ")) continue;
 			line = line

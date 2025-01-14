@@ -23,15 +23,11 @@ import { Branch, GitRunner } from "./utils/git-runner";
  */
 export namespace GitBranchesTreeView {
 	//#region CONSTANTS
-
 	const VSCODE_GIT_API_VERSION = 1;
 
 	const TIMEOUT_GET_REPO = 10;
 
-	const PINNED_COLOR = VSColors.interpolate("#FFDF00");
-
 	const SEPARATOR_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
-
 	//#endregion CONSTANTS
 
 	/**
@@ -184,13 +180,26 @@ export namespace GitBranchesTreeView {
 		 * @returns built items (primary-hierarchy)
 		 */
 		private async getItems(): Promise<(BranchItem | typeof SEPARATOR_ITEM)[]> {
+			//#region CONFIGS
+			const defMode = (<"Contains" | "Merged">ConfigMaid.get("git-branches.view.defaultMode")).toLowerCase();
+
 			const includeRemoteBranches = <boolean>ConfigMaid.get("git-branches.view.includeRemoteBranches");
+
 			const branchesSortMethod =
 				<"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.view.branchesSortMethod") === "Commit Date"
 					? "date"
 					: "alphabet";
-			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
+
+			const pinnedBranches = (<string[]>ConfigMaid.get("git-branches.view.pinnedBranches")).reverse();
+
 			const defExpandBranches = <boolean>ConfigMaid.get("git-branches.view.defaultExpandBranches");
+			//#endregion CONFIGS
+
+			//#region COLORS
+			const PINNED_COLOR = VSColors.interpolate("#FFDF00");
+			const GOOD_COLOR = VSColors.interpolate("#0F0");
+			const BAD_COLOR = VSColors.interpolate("#F00");
+			//#endregion COLORS
 
 			const branches = await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
 				sort: branchesSortMethod,
@@ -216,13 +225,13 @@ export namespace GitBranchesTreeView {
 				let noRevision;
 				let latestHash;
 				try {
-					latestHash = await this.gitRunner?.getLatestHash(branch, { short: true });
+					latestHash = await this.gitRunner.getLatestHash(branch, { short: true });
 				} catch {
 					noRevision = true;
 				}
 				item.description = `${Aux.string.capital(branch.type)}${noRevision ? "" : " - " + latestHash}`;
 
-				const lastUpdated = await this.gitRunner?.getUpdatedTime(branch, "local");
+				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
 					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.id}  \n${
 						noRevision ? "No Revision" : "Latest: " + latestHash
@@ -237,11 +246,51 @@ export namespace GitBranchesTreeView {
 				})[branch.type].push(item);
 			});
 
-			const pinnedReversed = pinnedBranches.reverse();
 			[localItems, remoteItems, detachedItems] = [localItems, remoteItems, detachedItems].map((items) => {
 				return items.sort((a, b) => {
-					return pinnedReversed.indexOf(b.branch.name) - pinnedReversed.indexOf(a.branch.name);
+					return pinnedBranches.indexOf(b.branch.name) - pinnedBranches.indexOf(a.branch.name);
 				});
+			});
+
+			const items = [].concat(localItems, remoteItems, detachedItems);
+			await Aux.async.map(items, async (item) => {
+				const branch = item.branch;
+
+				const goodBranches = (
+					await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
+						//MO TODO mode could be altered in tree, mode ?? defMode would be better
+						flags: [`--${defMode}`, branch.ref],
+					})
+				).map((branch) => branch.ref);
+
+				let goodItems: BranchItem[] = [];
+				let badItems: BranchItem[] = [];
+				await Aux.async.map(items, async (item) => {
+					const _branch = item.branch;
+					if (_branch === branch) return;
+
+					const _item = new BranchItem(_branch, "none");
+					_item.description = item.description;
+					//MO TODO maybe add something else to info user
+					//MO TODO probably commits away from merge base?
+					_item.tooltip = item.tooltip;
+					_item.collapsibleState = TreeItemCollapsibleState.None;
+
+					if (goodBranches.includes(_branch.ref)) {
+						_item.iconPath = new ThemeIcon("check", GOOD_COLOR);
+						goodItems.push(_item);
+						return;
+					}
+					_item.iconPath = new ThemeIcon("x", BAD_COLOR);
+					badItems.push(_item);
+				});
+
+				item.children = [].concat(
+					goodItems,
+					...(goodItems.length > 0 && badItems.length > 0 ? [SEPARATOR_ITEM] : []),
+					badItems,
+					SEPARATOR_ITEM,
+				);
 			});
 
 			return [].concat(
