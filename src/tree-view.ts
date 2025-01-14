@@ -287,7 +287,8 @@ export namespace GitBranchesTreeView {
 					child.iconPath = new ThemeIcon("x", UNMERGED_COLOR);
 					unmergedItems[i] = child;
 				});
-				(mergedItems = mergedItems.flat()), (unmergedItems = unmergedItems.flat());
+				mergedItems = mergedItems.flat();
+				unmergedItems = unmergedItems.flat();
 
 				item.children = [].concat(
 					mergedItems,
