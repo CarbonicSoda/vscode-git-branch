@@ -9,6 +9,7 @@ import {
 	TreeItemCollapsibleState,
 	ThemeIcon,
 	MarkdownString,
+	commands,
 } from "vscode";
 import { API as GitAPI, GitExtension, Repository } from "./declarations/git";
 
@@ -207,7 +208,7 @@ export namespace GitBranchesTreeView {
 			let localItems: BranchItem[] = [];
 			let remoteItems: BranchItem[] = [];
 			let detachedItems: BranchItem[] = [];
-			await Aux.async.map(branches, async (branch) => {
+			await Aux.async.map(branches, async (branch, i) => {
 				const item = new BranchItem(branch, itemsState);
 
 				const iconId = {
@@ -227,36 +228,34 @@ export namespace GitBranchesTreeView {
 				} catch {
 					noRevision = true;
 				}
-				item.description = `${Aux.string.capital(branch.type)}${noRevision ? "" : " - " + latestHash}`;
 
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
 					`$(${iconId}) ${Aux.string.capital(branch.type)} - _${branch.id}_  \n${
 						noRevision ? "No Revision" : "Latest Commit __" + latestHash + "__"
 					}  \nUpdated _${lastUpdated}_`,
-					true,
 				);
 
 				({
 					local: localItems,
 					remote: remoteItems,
 					detached: detachedItems,
-				})[branch.type].push(item);
+				})[branch.type][i] = item;
 			});
 
 			[localItems, remoteItems, detachedItems] = [localItems, remoteItems, detachedItems].map((items) => {
-				return items.sort((a, b) => {
+				return items.flat().sort((a, b) => {
 					return pinnedBranches.indexOf(b.branch.name) - pinnedBranches.indexOf(a.branch.name);
 				});
 			});
 
 			const items: BranchItem[] = [].concat(localItems, remoteItems, detachedItems);
-			await Aux.async.map(items, async (item) => {
+			await Aux.async.map(items, async (item, i) => {
 				const parentBranch = item.branch;
 
 				let mergedItems: BranchItem[] = [];
 				let unmergedItems: BranchItem[] = [];
-				await Aux.async.map(items, async (item) => {
+				await Aux.async.map(items, async (item, i) => {
 					const childBranch = item.branch;
 					if (childBranch === parentBranch) return;
 
@@ -266,7 +265,9 @@ export namespace GitBranchesTreeView {
 					const isMerged = branchDiff.from === 0;
 					const mergeBase = await this.gitRunner.getMergeBaseHash(childBranch, parentBranch, { short: true });
 
-					child.description = `${isMerged ? `Merged` : "↓" + branchDiff.from} ↑${branchDiff.to}`;
+					child.description = `${Aux.string.capital(childBranch.type)} - ${
+						isMerged ? `Merged` : "↓" + branchDiff.from
+					} ↑${branchDiff.to}`;
 					console.log((<MarkdownString>item.tooltip).value);
 					child.tooltip = new MarkdownString(
 						`${(<MarkdownString>item.tooltip).value}\n\n${
@@ -280,18 +281,31 @@ export namespace GitBranchesTreeView {
 
 					if (isMerged) {
 						child.iconPath = new ThemeIcon("check", MERGED_COLOR);
-						mergedItems.push(child);
+						mergedItems[i] = child;
 						return;
 					}
 					child.iconPath = new ThemeIcon("x", UNMERGED_COLOR);
-					unmergedItems.push(child);
+					unmergedItems[i] = child;
 				});
+				(mergedItems = mergedItems.flat()), (unmergedItems = unmergedItems.flat());
 
 				item.children = [].concat(
 					mergedItems,
 					...(mergedItems.length > 0 && unmergedItems.length > 0 ? [SEPARATOR_ITEM] : []),
 					unmergedItems,
-					SEPARATOR_ITEM,
+					...(i !== items.length - 1 ? [SEPARATOR_ITEM] : []),
+				);
+
+				const fullyMerged = unmergedItems.length === 0;
+				item.description =
+					`${Aux.string.capital(parentBranch.type)} - ` +
+					(fullyMerged ? "Fully Merged" : `\u2713${mergedItems.length} \u00d7${unmergedItems.length}`);
+				item.tooltip = new MarkdownString(
+					`${(<MarkdownString>item.tooltip).value}\n\n` +
+						(fullyMerged
+							? "Fully Merged"
+							: `Merged $(check) _${mergedItems.length}_ __-__ Unmerged $(x) _${unmergedItems.length}_`),
+					true,
 				);
 			});
 
@@ -326,6 +340,7 @@ export namespace GitBranchesTreeView {
 		Janitor.add(explorer);
 
 		await provider.initProvider();
+		commands.executeCommand("setContext", "git-branches.init", true);
 
 		// Janitor.add(
 		// 	explorer,
@@ -381,7 +396,6 @@ export namespace GitBranchesTreeView {
 
 		// await provider.initProvider();
 		//MO TODO add loading welcome view
-		// commands.executeCommand("setContext", "git-branches.explorerInitFinished", true);
 
 		// const editor = window.activeTextEditor;
 		// if (editor?.selection) onChangeEditorSelection(editor);
