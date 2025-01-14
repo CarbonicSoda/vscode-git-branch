@@ -58,7 +58,7 @@ export class GitRunner {
 		const res = await this.run("branch", `-${type[0]}`, ...(options?.flags ?? []));
 		let branches = [];
 		for (let line of res.split("\n")) {
-			if (line.includes("HEAD -> ")) continue;
+			if (line.length === 0 || line.includes("HEAD -> ")) continue;
 			line = line
 				.replaceAll(/[\(\)\*]/g, "")
 				.replace(/.*? -> /, "")
@@ -74,8 +74,8 @@ export class GitRunner {
 		if (options?.sort) branches.sort((a, b) => a.id.localeCompare(b.id));
 		if (options?.sort === "date") {
 			const timestamps: { [branchName: string]: number } = {};
-			await Aux.async.map(branches, async ({ id: name, ref }) => {
-				timestamps[name] = parseInt(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
+			await Aux.async.map(branches, async ({ id, ref }) => {
+				timestamps[id] = parseInt(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
 			});
 			branches.sort((a, b) => timestamps[b.id] - timestamps[a.id]);
 		}

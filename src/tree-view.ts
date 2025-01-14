@@ -204,13 +204,13 @@ export namespace GitBranchesTreeView {
 			const branches = await this.gitRunner.getBranches(includeRemoteBranches ? "all" : "local", {
 				sort: branchesSortMethod,
 			});
-			const expandBranches = branches.length === 1 ? "none" : defExpandBranches ? "expand" : "collapse";
+			const itemsState = branches.length === 1 ? "none" : defExpandBranches ? "expand" : "collapse";
 
 			let localItems: BranchItem[] = [];
 			let remoteItems: BranchItem[] = [];
 			let detachedItems: BranchItem[] = [];
 			await Aux.async.map(branches, async (branch) => {
-				const item = new BranchItem(branch, expandBranches);
+				const item = new BranchItem(branch, itemsState);
 
 				const iconId = {
 					local: "git-branch",
@@ -234,7 +234,7 @@ export namespace GitBranchesTreeView {
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
 					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.id}  \n${
-						noRevision ? "No Revision" : "Latest: " + latestHash
+						noRevision ? "No Revision" : "Latest Commit: " + latestHash
 					}  \nUpdated ${lastUpdated}`,
 					true,
 				);
@@ -273,6 +273,7 @@ export namespace GitBranchesTreeView {
 					_item.description = item.description;
 					//MO TODO maybe add something else to info user
 					//MO TODO probably commits away from merge base?
+					//MO TODO use git rev-list --count <some-command-yet-to-decide>
 					_item.tooltip = item.tooltip;
 					_item.collapsibleState = TreeItemCollapsibleState.None;
 
