@@ -257,9 +257,9 @@ export namespace BranchesTreeProvider {
 					} ↑${branchDiff.to}`;
 					child.tooltip = new MarkdownString(
 						`${(<MarkdownString>other.tooltip).value}\n\n${
-							isMerged ? `Fully Merged` : "From $(arrow-down) _" + branchDiff.from + "_"
-						} __-__ To $(arrow-up) _${branchDiff.to}_ ${
-							isMerged ? "" : " __-__ Sym $(arrow-swap) _" + branchDiff.sym + "_"
+							isMerged ? `Fully Merged` : "From $(arrow-down) " + branchDiff.from
+						} __-__ To $(arrow-up) ${branchDiff.to} ${
+							isMerged ? "" : " __-__ Sym $(arrow-swap) " + branchDiff.sym
 						}  \nMerge Base __${mergeBase}__`,
 						true,
 					);
@@ -289,7 +289,7 @@ export namespace BranchesTreeProvider {
 					`${(<MarkdownString>main.tooltip).value}\n\n` +
 						(fullyMerged
 							? "Fully Merged"
-							: `Merged $(check) _${mergedItems.length}_ __-__ Unmerged $(x) _${unmergedItems.length}_`),
+							: `Merged $(check) ${mergedItems.length} __-__ Unmerged $(x) ${unmergedItems.length}`),
 					true,
 				);
 			});
