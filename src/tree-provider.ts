@@ -285,7 +285,7 @@ export namespace BranchesTreeProvider {
 
 				await Aux.async.map(unmergedItems, async (item, j) => {
 					const latestFromItem = new TreeItem({ label: item.latestHash, highlights: [[0, 7]] });
-					latestFromItem.description = "Latest";
+					latestFromItem.description = "^Latest";
 					latestFromItem.tooltip = new MarkdownString(
 						`Branch _${item.label}_\n\n\`\`\`\n* ${item.branchDiff.from.join("\n  ")}\n& ${
 							item.mergeBaseHash
@@ -294,11 +294,10 @@ export namespace BranchesTreeProvider {
 
 					const spreadItem = new TreeItem("");
 					spreadItem.description = `${item.branchDiff.fromCnt} Ahead Merge Base`;
-					spreadItem.tooltip = "";
 
 					const mergeBaseItem = new TreeItem({ label: item.mergeBaseHash, highlights: [[0, 7]] });
 					if (item.branchDiff.toCnt === 0) {
-						mergeBaseItem.description = "Current";
+						mergeBaseItem.description = "Latest";
 						mergeBaseItem.tooltip = "";
 					} else {
 						mergeBaseItem.description = `${item.branchDiff.toCnt} Commit${Aux.string.plural(
