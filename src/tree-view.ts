@@ -1,4 +1,4 @@
-import { commands, TreeView, window } from "vscode";
+import { commands, TreeItem, TreeView, window } from "vscode";
 
 import { BranchesTreeProvider } from "./tree-provider";
 import { Janitor } from "./utils/janitor";
@@ -8,12 +8,14 @@ import { Janitor } from "./utils/janitor";
  */
 export namespace BranchesTreeView {
 	const provider = new BranchesTreeProvider.Provider();
-	const explorer: TreeView<BranchesTreeProvider.BranchItem | BranchesTreeProvider.SEPARATOR_ITEM> =
-		window.createTreeView("git-branches.gitBranches", {
+	const explorer: TreeView<BranchesTreeProvider.BranchItem | TreeItem> = window.createTreeView(
+		"git-branches.gitBranches",
+		{
 			treeDataProvider: provider,
 			showCollapseAll: true,
 			canSelectMany: false,
-		});
+		},
+	);
 
 	/**
 	 * Inits Git Branches provider, view and event listeners

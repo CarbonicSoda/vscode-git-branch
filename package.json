@@ -135,7 +135,7 @@
 						"scope": "resource"
 					},
 					"git-branches.view.defaultBranchesSortMethod": {
-						"order": 102,
+						"order": 201,
 						"title": "Sorting Method for Branches",
 						"type": "string",
 						"description": "Default sorting method used to order branches in the view.",
@@ -146,14 +146,21 @@
 						"default": "Commit Date"
 					},
 					"git-branches.view.expandBranchesByDefault": {
-						"order": 103,
+						"order": 301,
 						"title": "Expand Branches by Default",
 						"type": "boolean",
-						"description": "Expand branches in the view by default.",
+						"description": "Expand primary hierarchy branch items in the view by default.",
 						"default": true
 					},
+					"git-branches.view.expandUnmergedDetailsByDefault": {
+						"order": 302,
+						"title": "Expand Unmerged Details by Default",
+						"type": "boolean",
+						"description": "Expand unmerged branches details in the view by default.",
+						"default": false
+					},
 					"git-branches.view.pinnedBranches": {
-						"order": 104,
+						"order": 401,
 						"title": "Pinned Branches",
 						"type": "array",
 						"items": {

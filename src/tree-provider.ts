@@ -24,17 +24,25 @@ export namespace BranchesTreeProvider {
 	export const TIMEOUT_GET_REPO = 10;
 
 	export const SEPARATOR_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
-	export type SEPARATOR_ITEM = typeof SEPARATOR_ITEM;
 	//#endregion CONSTANTS
 
 	/**
 	 * Tree item class for a git branch
 	 */
 	export class BranchItem extends TreeItem {
-		children: BranchItem[] = [];
+		children: (BranchItem | TreeItem)[] = [];
 
 		type: "local" | "remote";
 		latestHash: string;
+		mergeBaseHash: string;
+		branchDiff: {
+			from: string[];
+			fromCnt: number;
+			to: string[];
+			toCnt: number;
+			sym: string[];
+			symCnt: number;
+		};
 
 		constructor(public branch: Branch, expand: "expand" | "collapse" | "none", public parent?: BranchItem) {
 			const state = {
@@ -50,8 +58,8 @@ export namespace BranchesTreeProvider {
 	/**
 	 * Git Branches tree data provider
 	 */
-	export class Provider implements TreeDataProvider<BranchItem | SEPARATOR_ITEM> {
-		items: (BranchItem | SEPARATOR_ITEM)[] = [];
+	export class Provider implements TreeDataProvider<BranchItem | TreeItem> {
+		items: (BranchItem | TreeItem)[] = [];
 
 		treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
 			void | undefined | BranchItem
@@ -149,7 +157,7 @@ export namespace BranchesTreeProvider {
 			return element.parent;
 		}
 
-		getChildren(element: BranchItem | undefined): (BranchItem | SEPARATOR_ITEM)[] {
+		getChildren(element: BranchItem | undefined): (BranchItem | TreeItem)[] {
 			if (element) return element.children;
 			return this.items;
 		}
@@ -177,16 +185,18 @@ export namespace BranchesTreeProvider {
 		 * Retrieves updates and builds view items
 		 * @returns built items (primary-hierarchy)
 		 */
-		private async getItems(): Promise<(BranchItem | SEPARATOR_ITEM)[]> {
+		private async getItems(): Promise<(BranchItem | TreeItem)[]> {
 			//#region CONFIGS
 			//MO TODO add method to set configs to override default
 			const defIncludeRemotes = <boolean>ConfigMaid.get("git-branches.view.includeRemotesByDefault");
 			const defExpandBranches = <boolean>ConfigMaid.get("git-branches.view.expandBranchesByDefault");
+			const defExpandUnmergedDetails = <boolean>(
+				ConfigMaid.get("git-branches.view.expandUnmergedDetailsByDefault")
+			);
 			const defBranchSort = <"Commit Date" | "Alphabetic">(
 				ConfigMaid.get("git-branches.view.defaultBranchesSortMethod")
 			);
 			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
-
 			//#endregion CONFIGS
 
 			//#region COLORS
@@ -235,58 +245,96 @@ export namespace BranchesTreeProvider {
 			});
 
 			const items: BranchItem[] = localItems.concat(remoteItems);
-			await Aux.async.map(items, async (main, i) => {
-				const parentBranch = main.branch;
+			await Aux.async.map(items, async (self, i) => {
+				const selfBranch = self.branch;
 
 				let mergedItems: BranchItem[] = [];
 				let unmergedItems: BranchItem[] = [];
-				await Aux.async.map(items, async (other, i) => {
-					const childBranch = other.branch;
-					if (childBranch === parentBranch) return;
+				await Aux.async.map(items, async (other, j) => {
+					if (i === j) return;
+					const otherBranch = other.branch;
 
-					const child = new BranchItem(childBranch, "none");
+					const child = new BranchItem(otherBranch, "none", self);
 
-					const branchDiff = await this.gitRunner.getBranchDiff(childBranch, parentBranch);
-					const isMerged = branchDiff.from === 0;
-					const mergeBase = isMerged
+					child.latestHash = items[j].latestHash;
+					child.branchDiff = await this.gitRunner.getBranchDiff(otherBranch, selfBranch, { short: true });
+					const isMerged = child.branchDiff.fromCnt === 0;
+					child.mergeBaseHash = isMerged
 						? other.latestHash
-						: await this.gitRunner.getMergeBaseHash(childBranch, parentBranch, { short: true });
+						: await this.gitRunner.getMergeBaseHash(otherBranch, selfBranch, { short: true });
 
-					child.description = `${Aux.string.capital(childBranch.type)} - ${
-						isMerged ? `Merged` : "↓" + branchDiff.from
-					} ↑${branchDiff.to}`;
+					child.description = `${Aux.string.capital(otherBranch.type)} - ${
+						isMerged ? `Merged` : "↓" + child.branchDiff.fromCnt
+					} ↑${child.branchDiff.toCnt}`;
 					child.tooltip = new MarkdownString(
 						`${(<MarkdownString>other.tooltip).value}\n\n${
-							isMerged ? `Fully Merged` : "From $(arrow-down) " + branchDiff.from
-						} __-__ To $(arrow-up) ${branchDiff.to} ${
-							isMerged ? "" : " __-__ Sym $(arrow-swap) " + branchDiff.sym
-						}  \nMerge Base __${mergeBase}__`,
+							isMerged ? `Fully Merged` : "From $(arrow-down) " + child.branchDiff.fromCnt
+						} __-__ To $(arrow-up) ${child.branchDiff.toCnt} ${
+							isMerged ? "" : " __-__ Sym $(arrow-swap) " + child.branchDiff.symCnt
+						}  \nMerge Base __${child.mergeBaseHash}__`,
 						true,
 					);
-					//MO TODO add mergebase..current under unmerged items
-					child.collapsibleState = TreeItemCollapsibleState.None;
-
 					child.iconPath = isMerged
 						? new ThemeIcon("check", MERGED_COLOR)
 						: new ThemeIcon("x", UNMERGED_COLOR);
-					(isMerged ? mergedItems : unmergedItems)[i] = child;
+
+					(isMerged ? mergedItems : unmergedItems)[j] = child;
 				});
 				mergedItems = mergedItems.flat();
 				unmergedItems = unmergedItems.flat();
 
-				main.children = [].concat(
+				await Aux.async.map(unmergedItems, async (item, j) => {
+					const latestFromItem = new TreeItem({ label: item.latestHash, highlights: [[0, 7]] });
+					latestFromItem.description = "Latest";
+					latestFromItem.tooltip = new MarkdownString(
+						`Branch _${item.label}_\n\n\`\`\`\n* ${item.branchDiff.from.join("\n  ")}\n& ${
+							item.mergeBaseHash
+						}\n\`\`\``,
+					);
+
+					const spreadItem = new TreeItem("");
+					spreadItem.description = `${item.branchDiff.fromCnt} Ahead Merge Base`;
+					spreadItem.tooltip = "";
+
+					const mergeBaseItem = new TreeItem({ label: item.mergeBaseHash, highlights: [[0, 7]] });
+					if (item.branchDiff.toCnt === 0) {
+						mergeBaseItem.description = "Current";
+						mergeBaseItem.tooltip = "";
+					} else {
+						mergeBaseItem.description = `${item.branchDiff.toCnt} Commit${Aux.string.plural(
+							item.branchDiff.toCnt,
+						)} Ago`;
+						mergeBaseItem.tooltip = new MarkdownString(
+							`Branch _${item.parent.label}_\n\n\`\`\`\n* ${item.branchDiff.to.join("\n  ")}\n& ${
+								item.mergeBaseHash
+							}\n\`\`\``,
+						);
+					}
+
+					item.collapsibleState = defExpandUnmergedDetails
+						? TreeItemCollapsibleState.Expanded
+						: TreeItemCollapsibleState.Collapsed;
+					item.children = [
+						latestFromItem,
+						spreadItem,
+						mergeBaseItem,
+						...Aux.array.opt(j < unmergedItems.length - 1, SEPARATOR_ITEM),
+					];
+				});
+
+				self.children = [].concat(
 					mergedItems,
 					...Aux.array.opt(mergedItems.length > 0 && unmergedItems.length > 0, SEPARATOR_ITEM),
 					unmergedItems,
-					...Aux.array.opt(i !== items.length - 1, SEPARATOR_ITEM),
+					...Aux.array.opt(i < items.length - 1, SEPARATOR_ITEM),
 				);
 
 				const fullyMerged = unmergedItems.length === 0;
-				main.description =
-					`${Aux.string.capital(parentBranch.type)} - ` +
+				self.description =
+					`${Aux.string.capital(selfBranch.type)} - ` +
 					(fullyMerged ? "Fully Merged" : `\u2713${mergedItems.length} \u00d7${unmergedItems.length}`);
-				main.tooltip = new MarkdownString(
-					`${(<MarkdownString>main.tooltip).value}\n\n` +
+				self.tooltip = new MarkdownString(
+					`${(<MarkdownString>self.tooltip).value}\n\n` +
 						(fullyMerged
 							? "Fully Merged"
 							: `Merged $(check) ${mergedItems.length} __-__ Unmerged $(x) ${unmergedItems.length}`),

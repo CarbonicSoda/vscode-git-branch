@@ -35,7 +35,7 @@ export namespace Aux.string {
 	 * @returns "s" if countable is plural or else ""
 	 */
 	export const plural = (countable: number | any[]) => {
-		return ((<{ length?: number }>countable).length ?? countable) === 1 ? "" : "s";
+		return (typeof countable === "number" ? countable : countable.length) === 1 ? "" : "s";
 	};
 
 	export const capital = (word: string) => {

@@ -71,18 +71,31 @@ export class GitRunner {
 	async getBranchDiff(
 		branch1: Branch,
 		branch2: Branch,
+		options?: { short?: boolean },
 	): Promise<{
-		from: number;
-		to: number;
-		sym: number;
+		from: string[];
+		fromCnt: number;
+		to: string[];
+		toCnt: number;
+		sym: string[];
+		symCnt: number;
 	}> {
-		const resFrom = this.run("rev-list", "--count", `${branch1.ref}..${branch2.ref}`);
-		const resTo = this.run("rev-list", "--count", `${branch2.ref}..${branch1.ref}`);
-		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => parseInt(res.trim()));
+		const resFrom = this.run("rev-list", `${branch1.ref}..${branch2.ref}`);
+		const resTo = this.run("rev-list", `${branch2.ref}..${branch1.ref}`);
+		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => {
+			let hashes = res.split("\n").filter((hash) => hash.length !== 0);
+			if (options?.short) hashes = hashes.map((hash) => hash.slice(0, 7));
+			return hashes;
+		});
+		const sym = from.concat(to);
+
 		return {
 			from,
+			fromCnt: from.length,
 			to,
-			sym: from + to,
+			toCnt: to.length,
+			sym,
+			symCnt: sym.length,
 		};
 	}
 
