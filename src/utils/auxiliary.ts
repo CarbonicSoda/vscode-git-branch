@@ -1,3 +1,9 @@
+export namespace Aux.array {
+	export function opt<T>(check: boolean, arg: T): [T] | [] {
+		return check ? [arg] : [];
+	}
+}
+
 /**
  * Asynchronous operation functions
  */

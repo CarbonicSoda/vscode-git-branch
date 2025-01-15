@@ -117,54 +117,55 @@
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.",
+				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, consider to [inspect configurations](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]).",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.init"
 			}
 		],
 		"configuration": [
 			{
-				"title": "View",
+				"title": "Git Branches",
 				"order": 1,
 				"properties": {
-					"git-branches.view.includeRemoteBranches": {
+					"git-branches.view.includeRemotesByDefault": {
 						"order": 101,
 						"title": "Include Remote Branches",
 						"type": "boolean",
-						"description": "Include remote branches in the view.",
-						"default": true
+						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may render the extension slow or unusable if the repository contains many branches, e.g. vscode with thousands of remote branches! This should only be toggled on smaller projects.",
+						"default": false,
+						"scope": "resource"
 					},
-					"git-branches.view.branchesSortMethod": {
+					"git-branches.view.defaultBranchesSortMethod": {
 						"order": 102,
 						"title": "Sorting Method for Branches",
 						"type": "string",
-						"description": "Sorting method used to order branches in the view.",
+						"description": "Default sorting method used to order branches in the view.",
 						"enum": [
 							"Commit Date",
 							"Alphabetic"
 						],
 						"default": "Commit Date"
 					},
-					"git-branches.view.pinnedBranches": {
+					"git-branches.view.expandBranchesByDefault": {
 						"order": 103,
+						"title": "Expand Branches by Default",
+						"type": "boolean",
+						"description": "Expand branches in the view by default.",
+						"default": true
+					},
+					"git-branches.view.pinnedBranches": {
+						"order": 104,
 						"title": "Pinned Branches",
 						"type": "array",
 						"items": {
 							"type": "string"
 						},
-						"description": "Branches that would be pinned on top of the view if exists in the order given below.",
+						"description": "Branches that would be pinned on top of the view, if exists, in the order given below.\nRemote versions of entries e.g. <origin>/<master> will alse be pinned given <master>.",
 						"default": [
 							"master",
 							"main"
 						],
 						"uniqueItems": true,
 						"scope": "resource"
-					},
-					"git-branches.view.defaultExpandBranches": {
-						"order": 104,
-						"title": "Expand Branches by Default",
-						"type": "boolean",
-						"description": "Expand branches in the view by default.",
-						"default": true
 					}
 				}
 			}

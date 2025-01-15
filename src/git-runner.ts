@@ -1,14 +1,13 @@
 import { execFile } from "node:child_process";
 
-import { Aux } from "./auxiliary";
+import { Aux } from "./utils/auxiliary";
 
 export class Branch {
 	ref: string;
 	name: string;
 
-	//MO NOTE do note that detached HEADs are technically not a branch
-	constructor(public id: string, public type: "local" | "remote" | "detached") {
-		this.ref = `${type === "detached" ? "" : type === "local" ? "refs/heads/" : "refs/remotes/"}${id}`;
+	constructor(public id: string, public type: "local" | "remote") {
+		this.ref = `${type === "local" ? "refs/heads/" : "refs/remotes/"}${id}`;
 		this.name = id.split("/").at(-1);
 	}
 }
@@ -28,33 +27,26 @@ export class GitRunner {
 
 	async getBranches(
 		type: "local" | "remote" | "all",
-		options?: { flags?: string[]; sort?: "date" | "alphabet" },
+		options?: { flags?: string[]; sort?: "Commit Date" | "Alphabetic" },
 	): Promise<Branch[]> {
 		if (type === "all") {
-			const branches = await Aux.async.map(["local", "remote"], async (type: "local" | "remote") =>
-				this.getBranches(type, options),
+			const branches = await Aux.async.map(
+				["local", "remote"],
+				async (type: "local" | "remote") => await this.getBranches(type, options),
 			);
 			return branches.flat();
 		}
 
 		const res = await this.run("branch", `-${type[0]}`, ...(options?.flags ?? []));
 		let branches = [];
-		for (let line of res.split("\n")) {
-			if (line.length === 0 || line.includes("HEAD -> ")) continue;
-			line = line
-				.replaceAll(/[\(\)\*]/g, "")
-				.replace(/.*? -> /, "")
-				.trim();
-			if (line.startsWith("HEAD detached")) {
-				line = line.replace(/HEAD detached (?:from|at) /, "");
-				branches.push(new Branch(line, "detached"));
-				continue;
-			}
-			branches.push(new Branch(line, type));
+		for (const line of res.split("\n")) {
+			if (line.length === 0 || line.includes("HEAD ")) continue;
+			const ref = line.replace("*", "").trim();
+			branches.push(new Branch(ref, type));
 		}
 
 		if (options?.sort) branches.sort((a, b) => a.id.localeCompare(b.id));
-		if (options?.sort === "date") {
+		if (options?.sort === "Commit Date") {
 			const timestamps: { [branchName: string]: number } = {};
 			await Aux.async.map(branches, async ({ id, ref }) => {
 				timestamps[id] = parseInt(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
@@ -66,8 +58,7 @@ export class GitRunner {
 	}
 
 	async getLatestHash(branch: Branch, options?: { short?: boolean }): Promise<string> {
-		const optArgs = options?.short ? ["--short"] : [];
-		return await this.run("rev-parse", ...optArgs, branch.ref);
+		return await this.run("rev-parse", ...Aux.array.opt(options?.short, "--short"), branch.ref);
 	}
 
 	async getUpdatedTime(
@@ -87,7 +78,7 @@ export class GitRunner {
 	}> {
 		const resFrom = this.run("rev-list", "--count", `${branch1.ref}..${branch2.ref}`);
 		const resTo = this.run("rev-list", "--count", `${branch2.ref}..${branch1.ref}`);
-		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => Number(res.trim()));
+		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => parseInt(res.trim()));
 		return {
 			from,
 			to,

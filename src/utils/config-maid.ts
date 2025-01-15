@@ -1,4 +1,5 @@
 import { workspace } from "vscode";
+
 import { Janitor } from "./janitor";
 
 /**
