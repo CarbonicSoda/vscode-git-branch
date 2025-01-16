@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import { Aux } from "./utils/auxiliary";
+import { Aux } from "./auxiliary";
 
 export class Branch {
 	ref: string;

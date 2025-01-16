@@ -15,7 +15,7 @@ import { ConfigMaid } from "./utils/config-maid";
 import { Janitor } from "./utils/janitor";
 import { VSColors } from "./utils/vs-colors";
 
-import { Branch, GitRunner } from "./git-runner";
+import { Branch, GitRunner } from "./utils/git-runner";
 
 export namespace BranchesTreeProvider {
 	//#region CONSTANTS
