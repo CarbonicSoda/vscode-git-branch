@@ -1,4 +1,5 @@
 import {
+	commands,
 	Event,
 	EventEmitter,
 	extensions,
@@ -8,6 +9,7 @@ import {
 	TreeItem,
 	TreeItemCollapsibleState,
 } from "vscode";
+
 import { API as GitAPI, GitExtension, Repository } from "./declarations/git";
 
 import { Aux } from "./utils/auxiliary";
@@ -99,6 +101,8 @@ export namespace BranchesTreeProvider {
 		}
 
 		async initProvider(): Promise<void> {
+			commands.executeCommand("setContext", "git-branches.noBranches", true);
+
 			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
 
 			ConfigMaid.onChange("git", () => {
@@ -257,6 +261,8 @@ export namespace BranchesTreeProvider {
 			});
 
 			const items: BranchItem[] = localItems.concat(remoteItems);
+			commands.executeCommand("setContext", "git-branches.noBranches", items.length === 0);
+			
 			await Aux.async.map(items, async (self, i) => {
 				const selfBranch = self.branch;
 

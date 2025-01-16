@@ -176,6 +176,43 @@
 					}
 				}
 			}
-		]
+		],
+		"commands": [
+			{
+				"command": "git-branches.reloadView",
+				"title": "Refresh View",
+				"enablement": "view.git-branches.gitBranches.visible && git-branches.init",
+				"icon": "$(refresh)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.toggleViewFold",
+				"title": "Toggle View Fold",
+				"enablement": "view.git-branches.gitBranches.visible && git-branches.init && !git-branches.noBranches",
+				"icon": "$(fold)",
+				"category": "Git Branches"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "git-branches.reloadView",
+				"when": "focusedView == 'git-branches.gitBranches' && git-branches.init",
+				"key": "Ctrl+R"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "git-branches.reloadView",
+					"when": "view.git-branches.gitBranches.visible && git-branches.init",
+					"group": "navigation@1"
+				},
+				{
+					"command": "git-branches.toggleViewFold",
+					"when": "view.git-branches.gitBranches.visible && git-branches.init && !git-branches.noBranches",
+					"group": "navigation@2"
+				}
+			]
+		}
 	}
 }
