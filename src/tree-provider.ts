@@ -215,11 +215,16 @@ export namespace BranchesTreeProvider {
 			await Aux.async.map(branches, async (branch, i) => {
 				const item = new BranchItem(branch, itemsState);
 
-				const iconId = branch.type === "local" ? "git-branch" : "github-alt";
-				item.iconPath = new ThemeIcon(
-					iconId,
-					pinnedBranches.includes(branch.name) ? PINNED_COLOR : VSColors.hash(branch.id),
-				);
+				const isPinned = pinnedBranches.includes(branch.name);
+				const iconId =
+					branch.type === "local"
+						? isPinned
+							? "repo"
+							: "git-branch"
+						: isPinned
+						? "github-inverted"
+						: "github-alt";
+				item.iconPath = new ThemeIcon(iconId, isPinned ? PINNED_COLOR : VSColors.hash(branch.id));
 
 				try {
 					item.latestHash = await this.gitRunner.getLatestHash(branch, { short: true });

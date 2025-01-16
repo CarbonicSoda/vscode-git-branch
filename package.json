@@ -77,7 +77,7 @@
 				{
 					"id": "gitBranches",
 					"title": "Git Branches",
-					"icon": "$(symbol-class)"
+					"icon": "$(merge)"
 				}
 			]
 		},
