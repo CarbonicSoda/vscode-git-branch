@@ -133,7 +133,7 @@ export namespace BranchesTreeProvider {
 			this.gitPath = this.gitExtensionAPI.git.path;
 
 			if (repo) this.currRepo = repo;
-			else {
+			else if (this.currRepo === undefined) {
 				this.repoListener = Janitor.add(
 					this.gitExtensionAPI.onDidOpenRepository((repo) => {
 						if (this.currRepo) return;

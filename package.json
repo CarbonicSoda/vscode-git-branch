@@ -186,14 +186,14 @@
 			{
 				"command": "git-branches.reloadView",
 				"title": "Refresh View",
-				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded",
+				"enablement": "view.git-branches.gitBranches.visible",
 				"icon": "$(refresh)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.switchRepo",
 				"title": "Switch Repository",
-				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded && gitOpenRepositoryCount > 1",
+				"enablement": "view.git-branches.gitBranches.visible && gitOpenRepositoryCount > 1",
 				"icon": "$(repo)",
 				"category": "Git Branches"
 			},
@@ -208,12 +208,12 @@
 		"keybindings": [
 			{
 				"command": "git-branches.reloadView",
-				"when": "focusedView == 'git-branches.gitBranches' && git-branches.loaded",
+				"when": "focusedView == 'git-branches.gitBranches'",
 				"key": "Ctrl+R"
 			},
 			{
 				"command": "git-branches.switchRepo",
-				"when": "focusedView == 'git-branches.gitBranches' && git-branches.loaded",
+				"when": "focusedView == 'git-branches.gitBranches'",
 				"key": "Ctrl+S"
 			}
 		],
@@ -221,17 +221,17 @@
 			"view/title": [
 				{
 					"command": "git-branches.switchRepo",
-					"when": "view == git-branches.gitBranches && git-branches.loaded",
+					"when": "view == git-branches.gitBranches",
 					"group": "navigation@1"
 				},
 				{
 					"command": "git-branches.reloadView",
-					"when": "view == git-branches.gitBranches && git-branches.loaded",
+					"when": "view == git-branches.gitBranches",
 					"group": "navigation@2"
 				},
 				{
 					"command": "git-branches.toggleViewFold",
-					"when": "view == git-branches.gitBranches && git-branches.loaded",
+					"when": "view == git-branches.gitBranches",
 					"group": "navigation@3"
 				}
 			]
