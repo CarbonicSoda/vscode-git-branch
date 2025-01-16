@@ -117,8 +117,13 @@
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, consider to [inspect configurations](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]).",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.init"
+				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, [inspect configurations](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]).",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.loaded"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]) and check back.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch"
 			}
 		],
 		"configuration": [
@@ -181,14 +186,21 @@
 			{
 				"command": "git-branches.reloadView",
 				"title": "Refresh View",
-				"enablement": "view.git-branches.gitBranches.visible && git-branches.init",
+				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded",
 				"icon": "$(refresh)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.switchRepo",
+				"title": "Switch Repository",
+				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded && gitOpenRepositoryCount > 1",
+				"icon": "$(repo)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.toggleViewFold",
 				"title": "Toggle View Fold",
-				"enablement": "view.git-branches.gitBranches.visible && git-branches.init && !git-branches.noBranches",
+				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded && !git-branches.noBranches",
 				"icon": "$(fold)",
 				"category": "Git Branches"
 			}
@@ -196,21 +208,31 @@
 		"keybindings": [
 			{
 				"command": "git-branches.reloadView",
-				"when": "focusedView == 'git-branches.gitBranches' && git-branches.init",
+				"when": "focusedView == 'git-branches.gitBranches' && git-branches.loaded",
 				"key": "Ctrl+R"
+			},
+			{
+				"command": "git-branches.switchRepo",
+				"when": "focusedView == 'git-branches.gitBranches' && git-branches.loaded",
+				"key": "Ctrl+S"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
-					"command": "git-branches.reloadView",
-					"when": "view.git-branches.gitBranches.visible && git-branches.init",
+					"command": "git-branches.switchRepo",
+					"when": "view == git-branches.gitBranches && git-branches.loaded",
 					"group": "navigation@1"
 				},
 				{
-					"command": "git-branches.toggleViewFold",
-					"when": "view.git-branches.gitBranches.visible && git-branches.init && !git-branches.noBranches",
+					"command": "git-branches.reloadView",
+					"when": "view == git-branches.gitBranches && git-branches.loaded",
 					"group": "navigation@2"
+				},
+				{
+					"command": "git-branches.toggleViewFold",
+					"when": "view == git-branches.gitBranches && git-branches.loaded",
+					"group": "navigation@3"
 				}
 			]
 		}

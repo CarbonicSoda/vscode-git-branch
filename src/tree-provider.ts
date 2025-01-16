@@ -35,6 +35,7 @@ export namespace BranchesTreeProvider {
 		children: (BranchItem | TreeItem)[] = [];
 
 		type: "local" | "remote";
+		fullyMerged: boolean;
 		latestHash: string;
 		mergeBaseHash: string;
 		branchDiff: {
@@ -100,14 +101,14 @@ export namespace BranchesTreeProvider {
 			return <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
 		}
 
-		async initProvider(): Promise<void> {
+		async init(): Promise<void> {
 			commands.executeCommand("setContext", "git-branches.noBranches", true);
 
 			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
 
 			ConfigMaid.onChange("git", () => {
 				Janitor.clear(this.repoListener);
-				if (this.gitEnabled) this.refreshGitAPI();
+				if (this.gitEnabled) this.reload();
 				else {
 					this.items = [];
 					this.refresh();
@@ -115,10 +116,11 @@ export namespace BranchesTreeProvider {
 				}
 			});
 
-			if (this.gitEnabled) await this.refreshGitAPI();
+			if (this.gitEnabled) await this.reload();
 		}
 
-		async refreshGitAPI(): Promise<void> {
+		async reload(repo?: Repository): Promise<void> {
+			commands.executeCommand("setContext", "git-branches.loaded", false);
 			if (!this.gitExtension.enabled) {
 				await new Promise<void>((res) => {
 					const once = this.gitExtension.onDidChangeEnablement(() => {
@@ -130,27 +132,25 @@ export namespace BranchesTreeProvider {
 			this.gitExtensionAPI = this.gitExtension.getAPI(VSCODE_GIT_API_VERSION);
 			this.gitPath = this.gitExtensionAPI.git.path;
 
-			this.repoListener = Janitor.add(
-				this.gitExtensionAPI.onDidOpenRepository((repo) => {
-					if (this.currRepo) return;
-					this.currRepo = repo;
-					this.refreshGitRunner();
-				}),
-			);
-			this.currRepo = await this.getPrimaryRepo();
-			if (this.currRepo) await this.refreshGitRunner();
-		}
-
-		async refreshGitRunner(): Promise<void> {
-			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
-			await this.reloadItems();
+			if (repo) this.currRepo = repo;
+			else {
+				this.repoListener = Janitor.add(
+					this.gitExtensionAPI.onDidOpenRepository((repo) => {
+						if (this.currRepo) return;
+						this.currRepo = repo;
+						this.loadItems();
+					}),
+				);
+				this.currRepo = await this.getPrimaryRepo();
+			}
+			if (this.currRepo) await this.loadItems();
 		}
 
 		/**
 		 * Resolves to undefined after {@link TIMEOUT_GET_REPO} seconds if primary repo cant be found
 		 * @returns Primary repository of workspace or null if not found
 		 */
-		async getPrimaryRepo(): Promise<Repository | undefined> {
+		private async getPrimaryRepo(): Promise<Repository | undefined> {
 			return await new Promise((res) => {
 				const repo = this.gitExtensionAPI.repositories[0];
 				if (repo) return res(repo);
@@ -165,6 +165,13 @@ export namespace BranchesTreeProvider {
 					res(undefined);
 				}, TIMEOUT_GET_REPO * 1000);
 			});
+		}
+
+		private async loadItems(): Promise<void> {
+			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
+			this.items = await this.getItems();
+			this.treeDataChangeEmitter.fire();
+			commands.executeCommand("setContext", "git-branches.loaded", true);
 		}
 
 		//#region Interface implementation methods
@@ -193,23 +200,10 @@ export namespace BranchesTreeProvider {
 		}
 
 		/**
-		 * Reloads provider with updated items
-		 */
-		async reloadItems(): Promise<void> {
-			if (!this.enabled) return;
-			this.items = await this.getItems();
-			this.treeDataChangeEmitter.fire();
-		}
-
-		/**
 		 * Retrieves updates and builds view items
 		 * @returns built items (primary-hierarchy)
 		 */
 		private async getItems(): Promise<(BranchItem | TreeItem)[]> {
-			//#region CONFIGS
-			//MO TODO add method to set configs to override default
-			//#endregion CONFIGS
-
 			//#region COLORS
 			const PINNED_COLOR = VSColors.interpolate("#FF0");
 			const MERGED_COLOR = VSColors.interpolate("#0F0");
@@ -219,12 +213,13 @@ export namespace BranchesTreeProvider {
 			const branches = await this.gitRunner.getBranches(this.includeRemotes ? "all" : "local", {
 				sort: this.branchSortMethod,
 			});
-			const itemsState = branches.length === 1 ? "none" : this.expandBranches ? "expand" : "collapse";
+			commands.executeCommand("setContext", "git-branches.singleBranch", branches.length < 2);
+			if (branches.length < 2) return [];
 
 			let localItems: BranchItem[] = [];
 			let remoteItems: BranchItem[] = [];
 			await Aux.async.map(branches, async (branch, i) => {
-				const item = new BranchItem(branch, itemsState);
+				const item = new BranchItem(branch, this.expandBranches ? "expand" : "collapse");
 
 				const isPinned = this.pinnedBranches.includes(branch.name);
 				const iconId =
@@ -262,7 +257,7 @@ export namespace BranchesTreeProvider {
 
 			const items: BranchItem[] = localItems.concat(remoteItems);
 			commands.executeCommand("setContext", "git-branches.noBranches", items.length === 0);
-			
+
 			await Aux.async.map(items, async (self, i) => {
 				const selfBranch = self.branch;
 
@@ -346,13 +341,13 @@ export namespace BranchesTreeProvider {
 					...Aux.array.opt(i < items.length - 1, SEPARATOR_ITEM),
 				);
 
-				const fullyMerged = unmergedItems.length === 0;
+				self.fullyMerged = unmergedItems.length === 0;
 				self.description =
 					`${Aux.string.capital(selfBranch.type)} - ` +
-					(fullyMerged ? "Fully Merged" : `\u2713${mergedItems.length} \u00d7${unmergedItems.length}`);
+					(self.fullyMerged ? "Fully Merged" : `\u2713${mergedItems.length} \u00d7${unmergedItems.length}`);
 				self.tooltip = new MarkdownString(
 					`${(<MarkdownString>self.tooltip).value}\n\n` +
-						(fullyMerged
+						(self.fullyMerged
 							? "Fully Merged"
 							: `Merged $(check) ${mergedItems.length} __-__ Unmerged $(x) ${unmergedItems.length}`),
 					true,
