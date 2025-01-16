@@ -2,6 +2,9 @@
  * Centrally manages disposable(-like)s and timeouts/intervals
  */
 export namespace Janitor {
+	/**
+	 * Alias for number returned from Janitor for better context
+	 */
 	export type Id = number;
 
 	/**
@@ -12,25 +15,24 @@ export namespace Janitor {
 		dispose(...args: any): any;
 	};
 
-	const managed: (DisposableLike | NodeJS.Timeout)[][] = [];
-	let instancesID = 0;
+	export const managed: (DisposableLike | NodeJS.Timeout)[][] = [];
+	export let currId = 0;
 
 	/**
-	 * @param DisposableOrTimeout instances to manage
+	 * @param disposableOrTimeout instances to manage
 	 * @returns unique id for `DisposableOrTimeout`
 	 */
-	export function add(...DisposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]): Id {
-		managed.push(DisposableOrTimeout);
-		return instancesID++;
+	export function add(...disposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]): Id {
+		managed[currId++] = disposableOrTimeout;
+		return currId;
 	}
 
 	/**
 	 * Disposes/Clears the original managed instances with `id` and replaces it with `DisposableOrTimeout[]`
 	 */
-	export function override(id: Id, ...DisposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]): void {
-		if (managed[id].length === 0) throw new Error(`No managed instance to override with id ${id}`);
+	export function override(id: Id, ...disposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]): void {
 		clear(id);
-		managed[id] = DisposableOrTimeout;
+		managed[id] = disposableOrTimeout;
 	}
 
 	/**
@@ -52,6 +54,6 @@ export namespace Janitor {
 	 * Disposes/Clears all currently managed instances
 	 */
 	export function cleanUp(): void {
-		for (let i = 0; i < instancesID; i++) clear(i);
+		for (let i = 0; i < currId; i++) clear(i);
 	}
 }
