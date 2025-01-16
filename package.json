@@ -130,7 +130,7 @@
 						"order": 101,
 						"title": "Include Remote Branches",
 						"type": "boolean",
-						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may render the extension slow or unusable if the repository contains many branches, e.g. vscode with thousands of remote branches! This should only be toggled on smaller projects.",
+						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may slow down the extension, or even unusable if the repository contains many branches (e.g. vscode with thousands of remote branches!). This should only be toggled on for smaller projects.",
 						"default": false,
 						"scope": "resource"
 					},
@@ -150,7 +150,7 @@
 						"title": "Expand Branches by Default",
 						"type": "boolean",
 						"description": "Expand primary hierarchy branch items in the view by default.",
-						"default": true
+						"default": false
 					},
 					"git-branches.view.expandUnmergedDetailsByDefault": {
 						"order": 302,

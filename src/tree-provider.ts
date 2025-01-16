@@ -82,6 +82,22 @@ export namespace BranchesTreeProvider {
 			return ConfigMaid.get("git.enabled");
 		}
 
+		get includeRemotes(): boolean {
+			return <boolean>ConfigMaid.get("git-branches.view.includeRemotesByDefault");
+		}
+		get expandBranches(): boolean {
+			return <boolean>ConfigMaid.get("git-branches.view.expandBranchesByDefault");
+		}
+		get expandUnmergedDetails(): boolean {
+			return <boolean>ConfigMaid.get("git-branches.view.expandUnmergedDetailsByDefault");
+		}
+		get branchSortMethod(): "Commit Date" | "Alphabetic" {
+			return <"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.view.defaultBranchesSortMethod");
+		}
+		get pinnedBranches(): string[] {
+			return <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
+		}
+
 		async initProvider(): Promise<void> {
 			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
 
@@ -188,15 +204,6 @@ export namespace BranchesTreeProvider {
 		private async getItems(): Promise<(BranchItem | TreeItem)[]> {
 			//#region CONFIGS
 			//MO TODO add method to set configs to override default
-			const defIncludeRemotes = <boolean>ConfigMaid.get("git-branches.view.includeRemotesByDefault");
-			const defExpandBranches = <boolean>ConfigMaid.get("git-branches.view.expandBranchesByDefault");
-			const defExpandUnmergedDetails = <boolean>(
-				ConfigMaid.get("git-branches.view.expandUnmergedDetailsByDefault")
-			);
-			const defBranchSort = <"Commit Date" | "Alphabetic">(
-				ConfigMaid.get("git-branches.view.defaultBranchesSortMethod")
-			);
-			const pinnedBranches = <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
 			//#endregion CONFIGS
 
 			//#region COLORS
@@ -205,17 +212,17 @@ export namespace BranchesTreeProvider {
 			const UNMERGED_COLOR = VSColors.interpolate("#F00");
 			//#endregion COLORS
 
-			const branches = await this.gitRunner.getBranches(defIncludeRemotes ? "all" : "local", {
-				sort: defBranchSort,
+			const branches = await this.gitRunner.getBranches(this.includeRemotes ? "all" : "local", {
+				sort: this.branchSortMethod,
 			});
-			const itemsState = branches.length === 1 ? "none" : defExpandBranches ? "expand" : "collapse";
+			const itemsState = branches.length === 1 ? "none" : this.expandBranches ? "expand" : "collapse";
 
 			let localItems: BranchItem[] = [];
 			let remoteItems: BranchItem[] = [];
 			await Aux.async.map(branches, async (branch, i) => {
 				const item = new BranchItem(branch, itemsState);
 
-				const isPinned = pinnedBranches.includes(branch.name);
+				const isPinned = this.pinnedBranches.includes(branch.name);
 				const iconId =
 					branch.type === "local"
 						? isPinned
@@ -242,10 +249,10 @@ export namespace BranchesTreeProvider {
 				(branch.type === "local" ? localItems : remoteItems)[i] = item;
 			});
 
-			pinnedBranches.reverse();
+			const pinned = this.pinnedBranches.reverse();
 			[localItems, remoteItems] = [localItems, remoteItems].map((items) => {
 				return items.flat().sort((a, b) => {
-					return pinnedBranches.indexOf(b.branch.name) - pinnedBranches.indexOf(a.branch.name);
+					return pinned.indexOf(b.branch.name) - pinned.indexOf(a.branch.name);
 				});
 			});
 
@@ -315,7 +322,7 @@ export namespace BranchesTreeProvider {
 						);
 					}
 
-					item.collapsibleState = defExpandUnmergedDetails
+					item.collapsibleState = this.expandUnmergedDetails
 						? TreeItemCollapsibleState.Expanded
 						: TreeItemCollapsibleState.Collapsed;
 					item.children = [
