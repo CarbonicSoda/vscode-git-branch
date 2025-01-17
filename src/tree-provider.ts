@@ -70,13 +70,10 @@ export namespace BranchesTreeProvider {
 		onDidChangeTreeData: Event<void | undefined | BranchItem> = this.treeDataChangeEmitter.event;
 
 		gitExtension: GitExtension;
-
 		gitExtensionAPI?: GitAPI;
 		gitPath?: string;
 		gitRunner?: GitRunner;
-
 		currRepo?: Repository;
-		repoListener?: Janitor.Id;
 
 		get enabled(): boolean {
 			return this.gitEnabled && this.currRepo !== undefined;
@@ -107,8 +104,7 @@ export namespace BranchesTreeProvider {
 			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
 
 			ConfigMaid.onChange("git", () => {
-				Janitor.clear(this.repoListener);
-				if (this.gitEnabled) this.reload();
+				if (this.gitEnabled) this.reload(this.currRepo);
 				else {
 					this.items = [];
 					this.refresh();
@@ -134,13 +130,14 @@ export namespace BranchesTreeProvider {
 
 			if (repo) this.currRepo = repo;
 			else if (this.currRepo === undefined) {
-				this.repoListener = Janitor.add(
-					this.gitExtensionAPI.onDidOpenRepository((repo) => {
-						if (this.currRepo) return;
-						this.currRepo = repo;
-						this.loadItems();
-					}),
-				);
+				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
+					if (this.currRepo) {
+						once.dispose();
+						return;
+					}
+					this.currRepo = repo;
+					this.loadItems();
+				});
 				this.currRepo = await this.getPrimaryRepo();
 			}
 			if (this.currRepo) await this.loadItems();
@@ -336,7 +333,6 @@ export namespace BranchesTreeProvider {
 
 				self.children = [].concat(
 					mergedItems,
-					...Aux.array.opt(mergedItems.length > 0 && unmergedItems.length > 0, SEPARATOR_ITEM),
 					unmergedItems,
 					...Aux.array.opt(i < items.length - 1, SEPARATOR_ITEM),
 				);
