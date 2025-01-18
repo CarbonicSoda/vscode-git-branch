@@ -2,7 +2,7 @@
 	"name": "git-branch-master",
 	"displayName": "Git Branch Master",
 	"description": "Level up Inspector for Git Branches",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"publisher": "carbonsoda",
 	"author": {
 		"name": "David W."
