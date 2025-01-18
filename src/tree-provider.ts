@@ -54,19 +54,19 @@ export namespace TreeProvider {
 		}
 
 		get includeRemotes(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.includeRemotes");
+			return <boolean>ConfigMaid.get("git-branch-master.includeRemotes");
 		}
 		get expandBranches(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.expandBranchesByDefault");
+			return <boolean>ConfigMaid.get("git-branch-master.expandBranchesByDefault");
 		}
 		get expandUnmergedDetails(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.expandUnmergedDetailsByDefault");
+			return <boolean>ConfigMaid.get("git-branch-master.expandUnmergedDetailsByDefault");
 		}
 		get branchSortMethod(): "Commit Date" | "Alphabetic" {
-			return <"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.defaultBranchesSortMethod");
+			return <"Commit Date" | "Alphabetic">ConfigMaid.get("git-branch-master.defaultBranchesSortMethod");
 		}
 		get pinnedBranches(): string[] {
-			return <string[]>ConfigMaid.get("git-branches.pinnedBranches");
+			return <string[]>ConfigMaid.get("git-branch-master.pinnedBranches");
 		}
 
 		async init(): Promise<void> {
@@ -86,9 +86,9 @@ export namespace TreeProvider {
 		}
 
 		async reload(repo?: Repository): Promise<void> {
-			commands.executeCommand("setContext", "git-branches.loaded", false);
-			commands.executeCommand("setContext", "git-branches.noCommits", true);
-			commands.executeCommand("setContext", "git-branches.noBranches", true);
+			commands.executeCommand("setContext", "git-branch-master.loaded", false);
+			commands.executeCommand("setContext", "git-branch-master.noCommits", true);
+			commands.executeCommand("setContext", "git-branch-master.noBranches", true);
 
 			Janitor.clear(this.commitListener);
 			Janitor.clear(this.logListener);
@@ -113,7 +113,7 @@ export namespace TreeProvider {
 				this.commitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
 				return;
 			}
-			commands.executeCommand("setContext", "git-branches.noCommits", false);
+			commands.executeCommand("setContext", "git-branch-master.noCommits", false);
 
 			const logsPath = `${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`;
 			while (true) {
@@ -131,7 +131,7 @@ export namespace TreeProvider {
 		private async loadItems(): Promise<void> {
 			this.items = await this.getItems();
 			this.treeDataChangeEmitter.fire();
-			commands.executeCommand("setContext", "git-branches.loaded", true);
+			commands.executeCommand("setContext", "git-branch-master.loaded", true);
 		}
 
 		/**
@@ -188,7 +188,7 @@ export namespace TreeProvider {
 			const branches = await this.gitRunner.getBranches(this.includeRemotes ? "all" : "local", {
 				sort: this.branchSortMethod,
 			});
-			commands.executeCommand("setContext", "git-branches.singleBranch", branches.length < 2);
+			commands.executeCommand("setContext", "git-branch-master.singleBranch", branches.length < 2);
 			if (branches.length < 2) return [];
 
 			let localItems: TreeItems.BranchItem[] = [];
@@ -233,7 +233,7 @@ export namespace TreeProvider {
 			});
 
 			const items: TreeItems.BranchItem[] = localCurrent.concat(localItems, remoteCurrent, remoteItems);
-			commands.executeCommand("setContext", "git-branches.noBranches", items.length === 0);
+			commands.executeCommand("setContext", "git-branch-master.noBranches", items.length === 0);
 
 			await Aux.async.map(items, async (self, i) => {
 				const selfBranch = self.branch;

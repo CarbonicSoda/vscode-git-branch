@@ -1,21 +1,21 @@
 <h3 align="center" style="margin-bottom: -10px">
-	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branches/master/media/icon.png" width="100" alt="git branches icon">
+	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="git branches icon">
 	<p></p>
-	Git Branches for VSCode
+	Git Branch Master for VSCode
 </h3>
-<h4 align="center">Convenient Inspector for Git Branches</h4>
+<h4 align="center">Level up Inspector for Git Branches</h4>
 
 ---
 
 ### Overview
 
 Git branches enable parallel development but can create messiness.  
-_Git Branches for VSCode_ helps you inspect merge statuses, identify merge bases, and track incoming and outgoing changes for a cleaner workflow.
+_Git Branch Master_ helps you inspect merge statuses, identify merge bases, and track incoming and outgoing changes for a cleaner workflow.
 
 _Features are not limited to..._
 
--   Intuitive indicators for branch relationships;
 -   Quickly check the merge status of branches;
+-   Intuitive indicators for branch relationships;
 -   Identify merge base for effective merging;
 -   Get live status updates as changes occur;
 -   Monitor updates from remote branches;
@@ -23,7 +23,7 @@ _Features are not limited to..._
 
 ### Demo
 
-![DEMO](https://github.com/CarbonicSoda/vscode-git-branches/blob/master/media/demo.png?raw=true)
+![DEMO](https://github.com/CarbonicSoda/vscode-git-branch-master/blob/master/media/demo.png?raw=true)
 
 > You can conveniently copy branch name / full commit hash
 > through item actions.
@@ -34,4 +34,4 @@ _Features are not limited to..._
 
 ---
 
-_&emsp;I can finally work on 69 branches at the same time with Git Branches!_
+_&emsp;I can finally work on 69 branches simultaneously with Git Branch Master...!!_

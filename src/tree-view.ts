@@ -11,7 +11,7 @@ import { TreeItems } from "./tree-items";
  */
 export namespace BranchesTreeView {
 	const provider = new TreeProvider.Provider();
-	const view: TreeView<TreeItems.BranchItem | TreeItem> = window.createTreeView("git-branches.gitBranches", {
+	const view: TreeView<TreeItems.BranchItem | TreeItem> = window.createTreeView("git-branch-master.gitBranchMaster", {
 		treeDataProvider: provider,
 		canSelectMany: false,
 	});
@@ -24,35 +24,35 @@ export namespace BranchesTreeView {
 	 * Inits Git Branches provider, view and event listeners
 	 */
 	export async function init(): Promise<void> {
-		ConfigMaid.onChange("git-branches", () => provider.reload());
+		ConfigMaid.onChange("git-branch-master", () => provider.reload());
 		ConfigMaid.onChange(
-			["git-branches.expandBranchesByDefault", "git-branches.expandUnmergedDetailsByDefault"],
+			["git-branch-master.expandBranchesByDefault", "git-branch-master.expandUnmergedDetailsByDefault"],
 			(level1, level2) => {
 				updateExpandState(level1, level2);
 				foldState = Number(level1) + Number(level1 && level2);
 			},
 		);
 
-		ConfigMaid.schedule(() => provider.reload(), "git-branches.fetchDelay");
+		ConfigMaid.schedule(() => provider.reload(), "git-branch-master.fetchDelay");
 
 		Janitor.add(
 			view,
 
-			commands.registerCommand("git-branches.switchRepo", switchRepo),
-			commands.registerCommand("git-branches.reloadView", () => provider.reload()),
-			commands.registerCommand("git-branches.toggleViewFold", toggleViewFold),
-			commands.registerCommand("git-branches.toggleRemoteBranches", () => {
-				const enablement = !ConfigMaid.get("git-branches.includeRemotes");
-				workspace.getConfiguration("git-branches").update("includeRemotes", enablement);
+			commands.registerCommand("git-branch-master.switchRepo", switchRepo),
+			commands.registerCommand("git-branch-master.reloadView", () => provider.reload()),
+			commands.registerCommand("git-branch-master.toggleViewFold", toggleViewFold),
+			commands.registerCommand("git-branch-master.toggleRemoteBranches", () => {
+				const enablement = !ConfigMaid.get("git-branch-master.includeRemotes");
+				workspace.getConfiguration("git-branch-master").update("includeRemotes", enablement);
 			}),
 
-			commands.registerCommand("git-branches.copyBranchName", (branchItem: TreeItems.BranchItem) =>
+			commands.registerCommand("git-branch-master.copyBranchName", (branchItem: TreeItems.BranchItem) =>
 				env.clipboard.writeText(branchItem.branch.id),
 			),
-			commands.registerCommand("git-branches.copyCommitHash", (commitItem: TreeItems.CommitItem) =>
+			commands.registerCommand("git-branch-master.copyCommitHash", (commitItem: TreeItems.CommitItem) =>
 				env.clipboard.writeText(commitItem.hash),
 			),
-			commands.registerCommand("git-branches.switchToBranch", (branchItem: TreeItems.BranchItem) =>
+			commands.registerCommand("git-branch-master.switchToBranch", (branchItem: TreeItems.BranchItem) =>
 				provider.gitRunner.switchToBranch(branchItem.branch),
 			),
 		);
