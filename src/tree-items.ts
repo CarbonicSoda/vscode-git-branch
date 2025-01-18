@@ -41,13 +41,14 @@ export namespace TreeItems {
 	}
 
 	export class CommitItem extends TreeItem {
-		contextValue = "Commit";
+		contextValue: string;
 
-		constructor(public hash: string) {
+		constructor(public hash: string, public parent?: BranchItem) {
 			super({
 				label: hash.slice(0, 7),
-				highlights: [[0, 7]],
+				highlights: hash === "None" ? [] : [[0, 7]],
 			});
+			this.contextValue = hash === "None" ? "None" : "Commit";
 		}
 	}
 }
