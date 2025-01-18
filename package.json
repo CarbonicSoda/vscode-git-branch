@@ -121,12 +121,12 @@
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nCheck back later.",
+				"contents": "The current repository only has a single active branch. The extension is only useful for repositories with multiple branches!\n\nCheck back later.",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch && config.git-branches.includeRemotes"
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branches.view.includeRemotes\"]) and check back.",
+				"contents": "The current repository only has a single active branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branches.view.includeRemotes\"]) and check back.",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch && !config.git-branches.includeRemotes"
 			}
 		],
