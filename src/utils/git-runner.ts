@@ -17,9 +17,8 @@ export class GitRunner {
 
 	async run(command: string, ...args: string[]): Promise<string> {
 		return await new Promise((res, rej) => {
-			execFile(this.gitPath, [command].concat(args), { cwd: this.repoPath }, (err, stdout, stderr) => {
+			execFile(this.gitPath, [command].concat(args), { cwd: this.repoPath }, (err, stdout) => {
 				if (err) return rej(err);
-				if (stderr) return rej(stderr);
 				res(stdout.trim());
 			});
 		});
@@ -101,5 +100,9 @@ export class GitRunner {
 		format: "default" | "relative" | "local" | "iso" | "rfc" = "default",
 	): Promise<string> {
 		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
+	}
+
+	async switchToBranch(branch: Branch): Promise<void> {
+		await this.run("switch", branch.id);
 	}
 }

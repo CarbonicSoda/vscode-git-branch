@@ -48,6 +48,9 @@ export namespace BranchesTreeView {
 			commands.registerCommand("git-branches.copyCommitHash", (commitItem: TreeItems.CommitItem) =>
 				env.clipboard.writeText(commitItem.hash),
 			),
+			commands.registerCommand("git-branches.switchToBranch", (branchItem: TreeItems.BranchItem) =>
+				provider.gitRunner.switchToBranch(branchItem.branch),
+			),
 		);
 
 		await provider.init();

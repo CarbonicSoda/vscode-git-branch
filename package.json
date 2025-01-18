@@ -160,6 +160,13 @@
 				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Commit",
 				"icon": "$(copy)",
 				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.switchToBranch",
+				"title": "Switch to Branch",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+				"icon": "$(arrow-swap)",
+				"category": "Git Branches"
 			}
 		],
 		"keybindings": [
@@ -199,9 +206,26 @@
 					"group": "inline@1"
 				},
 				{
+					"command": "git-branches.copyBranchName",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch"
+				},
+				{
 					"command": "git-branches.copyCommitHash",
 					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Commit",
 					"group": "inline@1"
+				},
+				{
+					"command": "git-branches.copyCommitHash",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Commit"
+				},
+				{
+					"command": "git-branches.switchToBranch",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+					"group": "inline@2"
+				},
+				{
+					"command": "git-branches.switchToBranch",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch"
 				}
 			]
 		},
