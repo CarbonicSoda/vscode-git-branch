@@ -18,6 +18,7 @@ import { GitRunner } from "./utils/git-runner";
 import { VSColors } from "./utils/vs-colors";
 
 import { TreeItems } from "./tree-items";
+import { Janitor } from "./utils/janitor";
 
 export namespace TreeProvider {
 	//#region CONSTANTS
@@ -43,6 +44,7 @@ export namespace TreeProvider {
 
 		gitRunner?: GitRunner;
 		currRepo?: Repository;
+		repoCommitListener?: Janitor.Id;
 
 		get enabled(): boolean {
 			return this.gitEnabled && this.currRepo !== undefined;
@@ -87,8 +89,10 @@ export namespace TreeProvider {
 		}
 
 		async reload(repo?: Repository): Promise<void> {
+			Janitor.clear(this.repoCommitListener);
+
 			if (repo) this.currRepo = repo;
-			else if (this.currRepo === undefined) {
+			else if (!this.currRepo) {
 				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
 					if (this.currRepo) {
 						once.dispose();
@@ -99,7 +103,12 @@ export namespace TreeProvider {
 				});
 				this.currRepo = await this.getPrimaryRepo();
 			}
-			if (!this.currRepo) await this.loadItems();
+			if (!this.currRepo) return;
+
+			//MO NOTES cannot listen to git commits in cli but only in scm gui
+			this.repoCommitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
+
+			await this.loadItems();
 		}
 
 		private async loadItems(): Promise<void> {

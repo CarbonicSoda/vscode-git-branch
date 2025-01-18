@@ -33,6 +33,8 @@ export namespace BranchesTreeView {
 			},
 		);
 
+		ConfigMaid.schedule(() => provider.reload(), "git-branches.fetch.fetchDelay");
+
 		Janitor.add(
 			view,
 
@@ -42,7 +44,7 @@ export namespace BranchesTreeView {
 		);
 
 		await provider.init();
-		if (!provider.currRepo) return;
+		if (!provider.enabled) return;
 
 		view.title = provider.currRepo.rootUri.path.split("/").at(-1);
 	}
