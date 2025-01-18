@@ -6,7 +6,7 @@ export class Branch {
 	ref: string;
 	name: string;
 
-	constructor(public id: string, public type: "local" | "remote") {
+	constructor(public id: string, public type: "local" | "remote", public isCurrent: boolean) {
 		this.ref = `${type === "local" ? "refs/heads/" : "refs/remotes/"}${id}`;
 		this.name = id.split("/").at(-1);
 	}
@@ -41,8 +41,10 @@ export class GitRunner {
 		let branches = [];
 		for (const line of res.split("\n")) {
 			if (line.length === 0 || line.includes("HEAD ")) continue;
-			const ref = line.replace("*", "").trim();
-			branches.push(new Branch(ref, type));
+			const isCurrent = line.includes("*");
+			let ref = line;
+			if (isCurrent) ref = line.replace("*", "");
+			branches.push(new Branch(ref.trim(), type, isCurrent));
 		}
 
 		if (options?.sort) branches.sort((a, b) => a.id.localeCompare(b.id));
@@ -57,21 +59,18 @@ export class GitRunner {
 		return branches;
 	}
 
-	async getLatestHash(branch: Branch, options?: { short?: boolean }): Promise<string> {
-		return await this.run("rev-parse", ...Aux.array.opt(options?.short, "--short"), branch.ref);
+	async getLatestHash(branch: Branch): Promise<string> {
+		return await this.run("rev-parse", branch.ref);
 	}
 
-	async getUpdatedTime(
-		branch: Branch,
-		format: "default" | "relative" | "local" | "iso" | "rfc" = "default",
-	): Promise<string> {
-		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
+	async getMergeBaseHash(branch1: Branch, branch2: Branch): Promise<string> {
+		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
+		return hash.slice(0, 7);
 	}
 
 	async getBranchDiff(
 		branch1: Branch,
 		branch2: Branch,
-		options?: { short?: boolean },
 	): Promise<{
 		from: string[];
 		fromCnt: number;
@@ -83,9 +82,8 @@ export class GitRunner {
 		const resFrom = this.run("rev-list", `${branch1.ref}..${branch2.ref}`);
 		const resTo = this.run("rev-list", `${branch2.ref}..${branch1.ref}`);
 		const [from, to] = (await Promise.all([resTo, resFrom])).map((res) => {
-			let hashes = res.split("\n").filter((hash) => hash.length !== 0);
-			if (options?.short) hashes = hashes.map((hash) => hash.slice(0, 7));
-			return hashes;
+			let hashes = res.split("\n").filter((hash) => hash.length);
+			return hashes.map((hash) => hash.slice(0, 7));
 		});
 		const sym = from.concat(to);
 
@@ -99,9 +97,10 @@ export class GitRunner {
 		};
 	}
 
-	async getMergeBaseHash(branch1: Branch, branch2: Branch, options?: { short?: boolean }): Promise<string> {
-		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
-		if (options?.short) hash = hash.slice(0, 7);
-		return hash;
+	async getUpdatedTime(
+		branch: Branch,
+		format: "default" | "relative" | "local" | "iso" | "rfc" = "default",
+	): Promise<string> {
+		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
 	}
 }

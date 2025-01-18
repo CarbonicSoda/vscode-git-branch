@@ -14,60 +14,28 @@ import { API as GitAPI, GitExtension, Repository } from "./declarations/git";
 
 import { Aux } from "./utils/auxiliary";
 import { ConfigMaid } from "./utils/config-maid";
-import { Janitor } from "./utils/janitor";
+import { GitRunner } from "./utils/git-runner";
 import { VSColors } from "./utils/vs-colors";
 
-import { Branch, GitRunner } from "./utils/git-runner";
+import { TreeItems } from "./tree-items";
 
-export namespace BranchesTreeProvider {
+export namespace TreeProvider {
 	//#region CONSTANTS
 	export const VSCODE_GIT_API_VERSION = 1;
 
 	export const TIMEOUT_GET_REPO = 10;
-
-	export const SEPARATOR_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
 	//#endregion CONSTANTS
-
-	/**
-	 * Tree item class for a git branch
-	 */
-	export class BranchItem extends TreeItem {
-		children: (BranchItem | TreeItem)[] = [];
-
-		type: "local" | "remote";
-		fullyMerged: boolean;
-		latestHash: string;
-		mergeBaseHash: string;
-		branchDiff: {
-			from: string[];
-			fromCnt: number;
-			to: string[];
-			toCnt: number;
-			sym: string[];
-			symCnt: number;
-		};
-
-		constructor(public branch: Branch, expand: "expand" | "collapse" | "none", public parent?: BranchItem) {
-			const state = {
-				expand: TreeItemCollapsibleState.Expanded,
-				collapse: TreeItemCollapsibleState.Collapsed,
-				none: TreeItemCollapsibleState.None,
-			}[expand];
-			super(branch.id, state);
-			this.type = branch.type;
-		}
-	}
 
 	/**
 	 * Git Branches tree data provider
 	 */
-	export class Provider implements TreeDataProvider<BranchItem | TreeItem> {
-		items: (BranchItem | TreeItem)[] = [];
+	export class Provider implements TreeDataProvider<TreeItems.BranchItem | TreeItems.CommitItem | TreeItem> {
+		items: (TreeItems.BranchItem | TreeItems.CommitItem | TreeItem)[] = [];
 
-		treeDataChangeEmitter: EventEmitter<void | undefined | BranchItem> = new EventEmitter<
-			void | undefined | BranchItem
+		treeDataChangeEmitter: EventEmitter<void | undefined | TreeItems.BranchItem> = new EventEmitter<
+			void | undefined | TreeItems.BranchItem
 		>();
-		onDidChangeTreeData: Event<void | undefined | BranchItem> = this.treeDataChangeEmitter.event;
+		onDidChangeTreeData: Event<void | undefined | TreeItems.BranchItem> = this.treeDataChangeEmitter.event;
 
 		gitExtension: GitExtension;
 		gitExtensionAPI?: GitAPI;
@@ -173,15 +141,15 @@ export namespace BranchesTreeProvider {
 
 		//#region Interface implementation methods
 
-		getTreeItem(element: BranchItem): BranchItem {
+		getTreeItem(element: TreeItems.BranchItem): TreeItems.BranchItem {
 			return element;
 		}
 
-		getParent(element: BranchItem): undefined | BranchItem {
+		getParent(element: TreeItems.BranchItem): undefined | TreeItems.BranchItem {
 			return element.parent;
 		}
 
-		getChildren(element: BranchItem | undefined): (BranchItem | TreeItem)[] {
+		getChildren(element: TreeItems.BranchItem | undefined): (TreeItems.BranchItem | TreeItem)[] {
 			if (element) return element.children;
 			return this.items;
 		}
@@ -192,7 +160,7 @@ export namespace BranchesTreeProvider {
 		 * Updates provider items (does not reload items)
 		 * @param item item to be updated, if not given the whole tree is refreshed
 		 */
-		refresh(item?: BranchItem): void {
+		refresh(item?: TreeItems.BranchItem): void {
 			this.treeDataChangeEmitter.fire(item);
 		}
 
@@ -200,7 +168,7 @@ export namespace BranchesTreeProvider {
 		 * Retrieves updates and builds view items
 		 * @returns built items (primary-hierarchy)
 		 */
-		private async getItems(): Promise<(BranchItem | TreeItem)[]> {
+		private async getItems(): Promise<(TreeItems.BranchItem | TreeItem)[]> {
 			//#region COLORS
 			const PINNED_COLOR = VSColors.interpolate("#FF0");
 			const MERGED_COLOR = VSColors.interpolate("#0F0");
@@ -213,35 +181,42 @@ export namespace BranchesTreeProvider {
 			commands.executeCommand("setContext", "git-branches.singleBranch", branches.length < 2);
 			if (branches.length < 2) return [];
 
-			let localItems: BranchItem[] = [];
-			let remoteItems: BranchItem[] = [];
+			let localItems: TreeItems.BranchItem[] = [];
+			const localCurrent: TreeItems.BranchItem[] = [];
+			let remoteItems: TreeItems.BranchItem[] = [];
+			const remoteCurrent: TreeItems.BranchItem[] = [];
 			await Aux.async.map(branches, async (branch, i) => {
-				const item = new BranchItem(branch, this.expandBranches ? "expand" : "collapse");
+				const item = new TreeItems.BranchItem(branch, this.expandBranches ? "expand" : "collapse");
 
 				const isPinned = this.pinnedBranches.includes(branch.name);
-				const iconId =
-					branch.type === "local"
-						? isPinned
-							? "repo"
-							: "git-branch"
-						: isPinned
-						? "github-inverted"
-						: "github-alt";
+				const iconId = branch.isCurrent
+					? "target"
+					: branch.type === "local"
+					? isPinned
+						? "repo"
+						: "git-branch"
+					: isPinned
+					? "github-inverted"
+					: "github-alt";
 				item.iconPath = new ThemeIcon(iconId, isPinned ? PINNED_COLOR : VSColors.hash(branch.id));
 
 				try {
-					item.latestHash = await this.gitRunner.getLatestHash(branch, { short: true });
+					item.latestHash = await this.gitRunner.getLatestHash(branch);
 				} catch {
 					return;
 				}
 
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
-					`$(${iconId}) ${Aux.string.capital(branch.type)} - _${branch.id}_  \nLatest Commit __${
-						item.latestHash
-					}__  \nUpdated ${lastUpdated}`,
+					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.isCurrent ? "__*__ " : ""}${
+						branch.id
+					}  \nLatest Commit __${item.latestHashShort}__  \nUpdated ${lastUpdated}`,
 				);
 
+				if (branch.isCurrent) {
+					(branch.type === "local" ? localCurrent : remoteCurrent).push(item);
+					return;
+				}
 				(branch.type === "local" ? localItems : remoteItems)[i] = item;
 			});
 
@@ -252,26 +227,26 @@ export namespace BranchesTreeProvider {
 				});
 			});
 
-			const items: BranchItem[] = localItems.concat(remoteItems);
+			const items: TreeItems.BranchItem[] = localCurrent.concat(localItems, remoteCurrent, remoteItems);
 			commands.executeCommand("setContext", "git-branches.noBranches", items.length === 0);
 
 			await Aux.async.map(items, async (self, i) => {
 				const selfBranch = self.branch;
 
-				let mergedItems: BranchItem[] = [];
-				let unmergedItems: BranchItem[] = [];
+				let mergedItems: TreeItems.BranchItem[] = [];
+				let unmergedItems: TreeItems.BranchItem[] = [];
 				await Aux.async.map(items, async (other, j) => {
 					if (i === j) return;
 					const otherBranch = other.branch;
 
-					const child = new BranchItem(otherBranch, "none", self);
+					const child = new TreeItems.BranchItem(otherBranch, "none", self);
 
 					child.latestHash = items[j].latestHash;
-					child.branchDiff = await this.gitRunner.getBranchDiff(otherBranch, selfBranch, { short: true });
+					child.branchDiff = await this.gitRunner.getBranchDiff(otherBranch, selfBranch);
 					const isMerged = child.branchDiff.fromCnt === 0;
 					child.mergeBaseHash = isMerged
 						? other.latestHash
-						: await this.gitRunner.getMergeBaseHash(otherBranch, selfBranch, { short: true });
+						: await this.gitRunner.getMergeBaseHash(otherBranch, selfBranch);
 
 					child.description = `${Aux.string.capital(otherBranch.type)} - ${
 						isMerged ? `Merged` : "↓" + child.branchDiff.fromCnt
@@ -281,7 +256,7 @@ export namespace BranchesTreeProvider {
 							isMerged ? `Fully Merged` : "From $(arrow-down) " + child.branchDiff.fromCnt
 						} __-__ To $(arrow-up) ${child.branchDiff.toCnt} ${
 							isMerged ? "" : " __-__ Sym $(arrow-swap) " + child.branchDiff.symCnt
-						}  \nMerge Base __${child.mergeBaseHash}__`,
+						}  \nMerge Base __${child.mergeBaseHashShort}__`,
 						true,
 					);
 					child.iconPath = isMerged
@@ -294,18 +269,18 @@ export namespace BranchesTreeProvider {
 				unmergedItems = unmergedItems.flat();
 
 				await Aux.async.map(unmergedItems, async (item, j) => {
-					const latestFromItem = new TreeItem({ label: item.latestHash, highlights: [[0, 7]] });
+					const latestFromItem = new TreeItems.CommitItem(item.latestHash);
 					latestFromItem.description = "^Latest";
 					latestFromItem.tooltip = new MarkdownString(
 						`Branch _${item.label}_\n\n\`\`\`\n* ${item.branchDiff.from.join("\n  ")}\n& ${
-							item.mergeBaseHash
+							item.mergeBaseHashShort
 						}\n\`\`\``,
 					);
 
 					const spreadItem = new TreeItem("");
 					spreadItem.description = `${item.branchDiff.fromCnt} Ahead Merge Base`;
 
-					const mergeBaseItem = new TreeItem({ label: item.mergeBaseHash, highlights: [[0, 7]] });
+					const mergeBaseItem = new TreeItems.CommitItem(item.mergeBaseHash);
 					if (item.branchDiff.toCnt === 0) {
 						mergeBaseItem.description = "Latest";
 						mergeBaseItem.tooltip = "";
@@ -315,7 +290,7 @@ export namespace BranchesTreeProvider {
 						)} Ago`;
 						mergeBaseItem.tooltip = new MarkdownString(
 							`Branch _${item.parent.label}_\n\n\`\`\`\n* ${item.branchDiff.to.join("\n  ")}\n& ${
-								item.mergeBaseHash
+								item.mergeBaseHashShort
 							}\n\`\`\``,
 						);
 					}
@@ -327,19 +302,19 @@ export namespace BranchesTreeProvider {
 						latestFromItem,
 						spreadItem,
 						mergeBaseItem,
-						...Aux.array.opt(j < unmergedItems.length - 1, SEPARATOR_ITEM),
+						...Aux.array.opt(j < unmergedItems.length - 1, TreeItems.SEP_ITEM),
 					];
 				});
 
 				self.children = [].concat(
 					mergedItems,
 					unmergedItems,
-					...Aux.array.opt(i < items.length - 1, SEPARATOR_ITEM),
+					...Aux.array.opt(i < items.length - 1, TreeItems.SEP_ITEM),
 				);
 
 				self.fullyMerged = unmergedItems.length === 0;
 				self.description =
-					`${Aux.string.capital(selfBranch.type)} - ` +
+					`${selfBranch.isCurrent ? "*" : ""}${Aux.string.capital(selfBranch.type)} - ` +
 					(self.fullyMerged ? "Fully Merged" : `\u2713${mergedItems.length} \u00d7${unmergedItems.length}`);
 				self.tooltip = new MarkdownString(
 					`${(<MarkdownString>self.tooltip).value}\n\n` +
@@ -351,8 +326,13 @@ export namespace BranchesTreeProvider {
 			});
 
 			return [].concat(
+				localCurrent,
 				localItems,
-				...Aux.array.opt(localItems.length > 0 && remoteItems.length > 0, SEPARATOR_ITEM),
+				...Aux.array.opt(
+					localCurrent.length + localItems.length > 0 && remoteCurrent.length + remoteItems.length > 0,
+					TreeItems.SEP_ITEM,
+				),
+				remoteCurrent,
 				remoteItems,
 			);
 		}

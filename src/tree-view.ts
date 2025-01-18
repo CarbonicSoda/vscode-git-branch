@@ -1,22 +1,20 @@
 import { commands, ThemeIcon, TreeItem, TreeItemCollapsibleState, TreeView, window } from "vscode";
 
-import { BranchesTreeProvider } from "./tree-provider";
+import { TreeProvider } from "./tree-provider";
 import { ConfigMaid } from "./utils/config-maid";
 import { Janitor } from "./utils/janitor";
 import { Aux } from "./utils/auxiliary";
+import { TreeItems } from "./tree-items";
 
 /**
  * Provides Git Branches view on primary sidebar, main presentation module
  */
 export namespace BranchesTreeView {
-	const provider = new BranchesTreeProvider.Provider();
-	const view: TreeView<BranchesTreeProvider.BranchItem | TreeItem> = window.createTreeView(
-		"git-branches.gitBranches",
-		{
-			treeDataProvider: provider,
-			canSelectMany: false,
-		},
-	);
+	const provider = new TreeProvider.Provider();
+	const view: TreeView<TreeItems.BranchItem | TreeItem> = window.createTreeView("git-branches.gitBranches", {
+		treeDataProvider: provider,
+		canSelectMany: false,
+	});
 
 	let foldState: 0 | 1 | 2 = <0 | 1 | 2>(
 		(Number(provider.expandBranches) + Number(provider.expandBranches && provider.expandUnmergedDetails))
@@ -92,11 +90,7 @@ export namespace BranchesTreeView {
 	async function toggleViewFold(): Promise<void> {
 		foldState =
 			(foldState + 1) %
-			(provider.items.some((item) =>
-				item instanceof BranchesTreeProvider.BranchItem ? !item.fullyMerged : false,
-			)
-				? 3
-				: 2);
+			(provider.items.some((item) => (item instanceof TreeItems.BranchItem ? !item.fullyMerged : false)) ? 3 : 2);
 		await updateExpandState(foldState > 0, foldState > 1);
 	}
 }
