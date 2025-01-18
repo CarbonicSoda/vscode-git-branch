@@ -38,7 +38,6 @@
 	"icon": "media/icon.png",
 	"main": "./dist/extension",
 	"extensionDependencies": [
-		"vscode.git-base",
 		"vscode.git"
 	],
 	"scripts": {
@@ -186,21 +185,21 @@
 			{
 				"command": "git-branches.reloadView",
 				"title": "Refresh View",
-				"enablement": "view.git-branches.gitBranches.visible",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible",
 				"icon": "$(refresh)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.switchRepo",
 				"title": "Switch Repository",
-				"enablement": "view.git-branches.gitBranches.visible && gitOpenRepositoryCount > 1",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && gitOpenRepositoryCount > 1",
 				"icon": "$(repo)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.toggleViewFold",
 				"title": "Toggle View Fold",
-				"enablement": "view.git-branches.gitBranches.visible && git-branches.loaded && !git-branches.noBranches",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && !git-branches.noBranches",
 				"icon": "$(fold)",
 				"category": "Git Branches"
 			}

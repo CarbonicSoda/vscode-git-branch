@@ -38,8 +38,9 @@ export namespace TreeProvider {
 		onDidChangeTreeData: Event<void | undefined | TreeItems.BranchItem> = this.treeDataChangeEmitter.event;
 
 		gitExtension: GitExtension;
-		gitExtensionAPI?: GitAPI;
-		gitPath?: string;
+		gitExtensionAPI: GitAPI;
+		gitPath: string;
+
 		gitRunner?: GitRunner;
 		currRepo?: Repository;
 
@@ -67,16 +68,18 @@ export namespace TreeProvider {
 		}
 
 		async init(): Promise<void> {
+			commands.executeCommand("setContext", "git-branches.loaded", false);
 			commands.executeCommand("setContext", "git-branches.noBranches", true);
 
-			this.gitExtension = await extensions.getExtension<GitExtension>("vscode.git").activate();
+			this.gitExtension = extensions.getExtension<GitExtension>("vscode.git").exports;
+			this.gitExtensionAPI = this.gitExtension.getAPI(VSCODE_GIT_API_VERSION);
+			this.gitPath = this.gitExtensionAPI.git.path;
 
 			ConfigMaid.onChange("git", () => {
 				if (this.gitEnabled) this.reload(this.currRepo);
 				else {
 					this.items = [];
 					this.refresh();
-					this.gitExtensionAPI = this.gitPath = this.gitRunner = this.currRepo = undefined;
 				}
 			});
 
@@ -84,18 +87,6 @@ export namespace TreeProvider {
 		}
 
 		async reload(repo?: Repository): Promise<void> {
-			commands.executeCommand("setContext", "git-branches.loaded", false);
-			if (!this.gitExtension.enabled) {
-				await new Promise<void>((res) => {
-					const once = this.gitExtension.onDidChangeEnablement(() => {
-						once.dispose();
-						res();
-					});
-				});
-			}
-			this.gitExtensionAPI = this.gitExtension.getAPI(VSCODE_GIT_API_VERSION);
-			this.gitPath = this.gitExtensionAPI.git.path;
-
 			if (repo) this.currRepo = repo;
 			else if (this.currRepo === undefined) {
 				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
@@ -108,7 +99,14 @@ export namespace TreeProvider {
 				});
 				this.currRepo = await this.getPrimaryRepo();
 			}
-			if (this.currRepo) await this.loadItems();
+			if (!this.currRepo) await this.loadItems();
+		}
+
+		private async loadItems(): Promise<void> {
+			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
+			this.items = await this.getItems();
+			this.treeDataChangeEmitter.fire();
+			commands.executeCommand("setContext", "git-branches.loaded", true);
 		}
 
 		/**
@@ -132,13 +130,6 @@ export namespace TreeProvider {
 			});
 		}
 
-		private async loadItems(): Promise<void> {
-			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
-			this.items = await this.getItems();
-			this.treeDataChangeEmitter.fire();
-			commands.executeCommand("setContext", "git-branches.loaded", true);
-		}
-
 		//#region Interface implementation methods
 
 		getTreeItem(element: TreeItems.BranchItem): TreeItems.BranchItem {
@@ -154,7 +145,7 @@ export namespace TreeProvider {
 			return this.items;
 		}
 
-		//#endregion End of interface implementation methods
+		//#endregion Interface implementation methods
 
 		/**
 		 * Updates provider items (does not reload items)
