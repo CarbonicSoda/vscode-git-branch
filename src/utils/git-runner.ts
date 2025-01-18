@@ -58,9 +58,9 @@ export class GitRunner {
 		return branches;
 	}
 
-	async getLatestHash(branch: Branch): Promise<string> {
+	async getLatestHash(branch?: Branch): Promise<string> {
 		try {
-			return await this.run("rev-parse", branch.ref);
+			return await this.run("rev-parse", branch?.ref || "HEAD");
 		} catch {
 			return "None";
 		}
@@ -104,10 +104,10 @@ export class GitRunner {
 	}
 
 	async getUpdatedTime(
-		branch: Branch,
+		branch?: Branch,
 		format: "default" | "relative" | "local" | "iso" | "rfc" = "default",
 	): Promise<string> {
-		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch.ref);
+		return await this.run("log", "-1", "--format=%cd", `--date=${format}`, branch?.ref ?? "HEAD");
 	}
 
 	async switchToBranch(branch: Branch): Promise<void> {

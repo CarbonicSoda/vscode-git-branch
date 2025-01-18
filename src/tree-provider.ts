@@ -43,7 +43,8 @@ export namespace TreeProvider {
 
 		gitRunner?: GitRunner;
 		currRepo?: Repository;
-		repoCommitListener?: Janitor.Id;
+		commitListener?: Janitor.Id;
+		logListener?: Janitor.Id;
 
 		get enabled(): boolean {
 			return this.gitEnabled && this.currRepo !== undefined;
@@ -69,9 +70,6 @@ export namespace TreeProvider {
 		}
 
 		async init(): Promise<void> {
-			commands.executeCommand("setContext", "git-branches.loaded", false);
-			commands.executeCommand("setContext", "git-branches.noBranches", true);
-
 			this.gitExtension = extensions.getExtension<GitExtension>("vscode.git").exports;
 			this.gitExtensionAPI = this.gitExtension.getAPI(VSCODE_GIT_API_VERSION);
 			this.gitPath = this.gitExtensionAPI.git.path;
@@ -88,7 +86,12 @@ export namespace TreeProvider {
 		}
 
 		async reload(repo?: Repository): Promise<void> {
-			Janitor.clear(this.repoCommitListener);
+			commands.executeCommand("setContext", "git-branches.loaded", false);
+			commands.executeCommand("setContext", "git-branches.noCommits", true);
+			commands.executeCommand("setContext", "git-branches.noBranches", true);
+
+			Janitor.clear(this.commitListener);
+			Janitor.clear(this.logListener);
 
 			if (repo) this.currRepo = repo;
 			else if (!this.currRepo) {
@@ -104,6 +107,12 @@ export namespace TreeProvider {
 					res();
 				});
 			}
+			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
+
+			this.commitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
+
+			if ((await this.gitRunner.getLatestHash()) === "None") return;
+			commands.executeCommand("setContext", "git-branches.noCommits", false);
 
 			const logHEAD = `${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`;
 			while (true) {
@@ -114,13 +123,11 @@ export namespace TreeProvider {
 					await new Promise((res) => setTimeout(res, 1000));
 				}
 			}
-			Janitor.add(watch(logHEAD, "buffer", () => this.reload()));
-
+			this.logListener = Janitor.add(watch(logHEAD, "buffer", () => this.reload()));
 			await this.loadItems();
 		}
 
 		private async loadItems(): Promise<void> {
-			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
 			this.items = await this.getItems();
 			this.treeDataChangeEmitter.fire();
 			commands.executeCommand("setContext", "git-branches.loaded", true);
