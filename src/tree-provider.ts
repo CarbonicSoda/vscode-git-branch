@@ -1,4 +1,4 @@
-import { watch } from "node:fs";
+import { accessSync, constants, watch } from "node:fs";
 import {
 	commands,
 	Event,
@@ -24,8 +24,6 @@ import { Janitor } from "./utils/janitor";
 export namespace TreeProvider {
 	//#region CONSTANTS
 	export const VSCODE_GIT_API_VERSION = 1;
-
-	export const TIMEOUT_GET_REPO = 10;
 	//#endregion CONSTANTS
 
 	/**
@@ -94,22 +92,29 @@ export namespace TreeProvider {
 
 			if (repo) this.currRepo = repo;
 			else if (!this.currRepo) {
-				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
-					if (this.currRepo) {
+				await new Promise<void>(async (res) => {
+					const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
+						this.currRepo = repo;
+						if (!repo) return;
 						once.dispose();
-						return;
-					}
-					this.currRepo = repo;
-					this.loadItems();
+						res();
+					});
+					this.currRepo = await this.getPrimaryRepo();
+					once.dispose();
+					res();
 				});
-				this.currRepo = await this.getPrimaryRepo();
 			}
-			if (!this.currRepo) return;
 
-			//MO NOTE file does not exist without a single commit
-			try {
-				Janitor.add(watch(`${this.currRepo.rootUri.path}/.git/logs/HEAD`, "buffer", () => this.reload()));
-			} catch {}
+			const logHEAD = `${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`;
+			while (true) {
+				try {
+					accessSync(logHEAD, constants.R_OK);
+					break;
+				} catch {
+					await new Promise((res) => setTimeout(res, 1000));
+				}
+			}
+			Janitor.add(watch(logHEAD, "buffer", () => this.reload()));
 
 			await this.loadItems();
 		}
@@ -122,23 +127,17 @@ export namespace TreeProvider {
 		}
 
 		/**
-		 * Resolves to undefined after {@link TIMEOUT_GET_REPO} seconds if primary repo cant be found
 		 * @returns Primary repository of workspace or null if not found
 		 */
-		private async getPrimaryRepo(): Promise<Repository | undefined> {
+		private async getPrimaryRepo(): Promise<Repository> {
 			return await new Promise((res) => {
 				const repo = this.gitExtensionAPI.repositories[0];
 				if (repo) return res(repo);
 
 				const once = this.gitExtensionAPI.onDidOpenRepository((repo) => {
-					clearTimeout(timeout);
 					once.dispose();
 					res(repo);
 				});
-				const timeout = setTimeout(() => {
-					once.dispose();
-					res(undefined);
-				}, TIMEOUT_GET_REPO * 1000);
 			});
 		}
 
@@ -203,12 +202,7 @@ export namespace TreeProvider {
 					: "github-alt";
 				item.iconPath = new ThemeIcon(iconId, isPinned ? PINNED_COLOR : VSColors.hash(branch.id));
 
-				try {
-					item.latestHash = await this.gitRunner.getLatestHash(branch);
-				} catch {
-					return;
-				}
-
+				item.latestHash = await this.gitRunner.getLatestHash(branch);
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
 					`$(${iconId}) ${Aux.string.capital(branch.type)} $(dash) ${branch.isCurrent ? "*" : ""}${

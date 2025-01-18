@@ -59,7 +59,11 @@ export class GitRunner {
 	}
 
 	async getLatestHash(branch: Branch): Promise<string> {
-		return await this.run("rev-parse", branch.ref);
+		try {
+			return await this.run("rev-parse", branch.ref);
+		} catch {
+			return "None";
+		}
 	}
 
 	async getMergeBaseHash(branch1: Branch, branch2: Branch): Promise<string> {
