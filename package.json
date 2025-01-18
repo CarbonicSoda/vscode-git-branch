@@ -116,13 +116,18 @@
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, [inspect configurations](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]).",
+				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, [inspect configurations](command:workbench.action.openSettings?[\"git-branches\"]).",
 				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branches.loaded"
 			},
 			{
 				"view": "git-branches.gitBranches",
-				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branches.view.includeRemotesByDefault\"]) and check back.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch"
+				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nCheck back later.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch && config.git-branches.includeRemotes"
+			},
+			{
+				"view": "git-branches.gitBranches",
+				"contents": "The current repository only has a single branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branches.view.includeRemotes\"]) and check back.",
+				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branches.loaded && git-branches.singleBranch && !config.git-branches.includeRemotes"
 			}
 		],
 		"commands": [
@@ -167,6 +172,13 @@
 				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
 				"icon": "$(arrow-swap)",
 				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.toggleRemoteBranches",
+				"title": "Toggle Remote Branches",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded",
+				"icon": "$(github-alt)",
+				"category": "Git Branches"
 			}
 		],
 		"keybindings": [
@@ -174,11 +186,6 @@
 				"command": "git-branches.reloadView",
 				"when": "focusedView == 'git-branches.gitBranches'",
 				"key": "Ctrl+R"
-			},
-			{
-				"command": "git-branches.switchRepo",
-				"when": "focusedView == 'git-branches.gitBranches'",
-				"key": "Ctrl+S"
 			}
 		],
 		"menus": {
@@ -189,14 +196,19 @@
 					"group": "navigation@1"
 				},
 				{
-					"command": "git-branches.reloadView",
+					"command": "git-branches.toggleRemoteBranches",
 					"when": "view == git-branches.gitBranches",
 					"group": "navigation@2"
 				},
 				{
-					"command": "git-branches.toggleViewFold",
+					"command": "git-branches.reloadView",
 					"when": "view == git-branches.gitBranches",
 					"group": "navigation@3"
+				},
+				{
+					"command": "git-branches.toggleViewFold",
+					"when": "view == git-branches.gitBranches",
+					"group": "navigation@4"
 				}
 			],
 			"view/item/context": [
@@ -231,10 +243,9 @@
 		},
 		"configuration": [
 			{
-				"title": "View",
-				"order": 1,
+				"title": "Git Branches",
 				"properties": {
-					"git-branches.view.includeRemotesByDefault": {
+					"git-branches.includeRemotes": {
 						"order": 101,
 						"title": "Include Remote Branches",
 						"type": "boolean",
@@ -242,7 +253,7 @@
 						"default": false,
 						"scope": "resource"
 					},
-					"git-branches.view.defaultBranchesSortMethod": {
+					"git-branches.defaultBranchesSortMethod": {
 						"order": 201,
 						"title": "Sorting Method for Branches",
 						"type": "string",
@@ -253,21 +264,21 @@
 						],
 						"default": "Commit Date"
 					},
-					"git-branches.view.expandBranchesByDefault": {
+					"git-branches.expandBranchesByDefault": {
 						"order": 301,
 						"title": "Expand Branches by Default",
 						"type": "boolean",
 						"description": "Expand primary hierarchy branch items in the view by default.",
 						"default": false
 					},
-					"git-branches.view.expandUnmergedDetailsByDefault": {
+					"git-branches.expandUnmergedDetailsByDefault": {
 						"order": 302,
 						"title": "Expand Unmerged Details by Default",
 						"type": "boolean",
 						"description": "Expand unmerged branches details in the view by default.",
 						"default": false
 					},
-					"git-branches.view.pinnedBranches": {
+					"git-branches.pinnedBranches": {
 						"order": 401,
 						"title": "Pinned Branches",
 						"type": "array",
@@ -281,15 +292,9 @@
 						],
 						"uniqueItems": true,
 						"scope": "resource"
-					}
-				}
-			},
-			{
-				"title": "Fetch",
-				"order": 2,
-				"properties": {
-					"git-branches.fetch.fetchDelay": {
-						"order": 101,
+					},
+					"git-branches.fetchDelay": {
+						"order": 501,
 						"title": "Fetch Delay",
 						"type": "number",
 						"minimum": 1000,

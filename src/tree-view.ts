@@ -1,4 +1,4 @@
-import { commands, env, ThemeIcon, TreeItem, TreeItemCollapsibleState, TreeView, window } from "vscode";
+import { commands, env, ThemeIcon, TreeItem, TreeItemCollapsibleState, TreeView, window, workspace } from "vscode";
 
 import { TreeProvider } from "./tree-provider";
 import { ConfigMaid } from "./utils/config-maid";
@@ -24,16 +24,16 @@ export namespace BranchesTreeView {
 	 * Inits Git Branches provider, view and event listeners
 	 */
 	export async function init(): Promise<void> {
-		ConfigMaid.onChange("git-branches.view", () => provider.reload());
+		ConfigMaid.onChange("git-branches", () => provider.reload());
 		ConfigMaid.onChange(
-			["git-branches.view.expandBranchesByDefault", "git-branches.view.expandUnmergedDetailsByDefault"],
+			["git-branches.expandBranchesByDefault", "git-branches.expandUnmergedDetailsByDefault"],
 			(level1, level2) => {
 				updateExpandState(level1, level2);
 				foldState = Number(level1) + Number(level1 && level2);
 			},
 		);
 
-		ConfigMaid.schedule(() => provider.reload(), "git-branches.fetch.fetchDelay");
+		ConfigMaid.schedule(() => provider.reload(), "git-branches.fetchDelay");
 
 		Janitor.add(
 			view,
@@ -41,6 +41,10 @@ export namespace BranchesTreeView {
 			commands.registerCommand("git-branches.switchRepo", switchRepo),
 			commands.registerCommand("git-branches.reloadView", () => provider.reload()),
 			commands.registerCommand("git-branches.toggleViewFold", toggleViewFold),
+			commands.registerCommand("git-branches.toggleRemoteBranches", () => {
+				const enablement = !ConfigMaid.get("git-branches.includeRemotes");
+				workspace.getConfiguration("git-branches").update("includeRemotes", enablement);
+			}),
 
 			commands.registerCommand("git-branches.copyBranchName", (branchItem: TreeItems.BranchItem) =>
 				env.clipboard.writeText(branchItem.branch.id),

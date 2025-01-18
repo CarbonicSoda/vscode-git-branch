@@ -55,19 +55,19 @@ export namespace TreeProvider {
 		}
 
 		get includeRemotes(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.view.includeRemotesByDefault");
+			return <boolean>ConfigMaid.get("git-branches.includeRemotes");
 		}
 		get expandBranches(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.view.expandBranchesByDefault");
+			return <boolean>ConfigMaid.get("git-branches.expandBranchesByDefault");
 		}
 		get expandUnmergedDetails(): boolean {
-			return <boolean>ConfigMaid.get("git-branches.view.expandUnmergedDetailsByDefault");
+			return <boolean>ConfigMaid.get("git-branches.expandUnmergedDetailsByDefault");
 		}
 		get branchSortMethod(): "Commit Date" | "Alphabetic" {
-			return <"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.view.defaultBranchesSortMethod");
+			return <"Commit Date" | "Alphabetic">ConfigMaid.get("git-branches.defaultBranchesSortMethod");
 		}
 		get pinnedBranches(): string[] {
-			return <string[]>ConfigMaid.get("git-branches.view.pinnedBranches");
+			return <string[]>ConfigMaid.get("git-branches.pinnedBranches");
 		}
 
 		async init(): Promise<void> {
