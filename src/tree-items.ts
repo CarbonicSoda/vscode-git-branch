@@ -6,7 +6,6 @@ export namespace TreeItems {
 	export const SEP_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
 
 	export class BranchItem extends TreeItem {
-		contextValue = "Branch";
 		children: (BranchItem | TreeItem)[] = [];
 
 		type: "local" | "remote";
@@ -37,6 +36,7 @@ export namespace TreeItems {
 			}[expand];
 			super(branch.id, state);
 			this.type = branch.type;
+			this.contextValue = this.type === "local" ? "LocalBranch" : "RemoteBranch";
 		}
 	}
 

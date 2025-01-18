@@ -153,14 +153,14 @@
 			{
 				"command": "git-branches.toggleViewFold",
 				"title": "Toggle View Fold",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && !git-branches.noBranches",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible",
 				"icon": "$(fold)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.copyBranchName",
 				"title": "Copy Branch Name",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && (viewItem == LocalBranch || viewItem == RemoteBranch)",
 				"icon": "$(copy)",
 				"category": "Git Branches"
 			},
@@ -174,14 +174,14 @@
 			{
 				"command": "git-branches.switchToBranch",
 				"title": "Switch to Branch",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == LocalBranch",
 				"icon": "$(arrow-swap)",
 				"category": "Git Branches"
 			},
 			{
 				"command": "git-branches.toggleRemoteBranches",
 				"title": "Toggle Remote Branches",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible",
 				"icon": "$(github-alt)",
 				"category": "Git Branches"
 			}
@@ -219,12 +219,12 @@
 			"view/item/context": [
 				{
 					"command": "git-branches.copyBranchName",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && (viewItem == LocalBranch || viewItem == RemoteBranch)",
 					"group": "inline@1"
 				},
 				{
 					"command": "git-branches.copyBranchName",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch"
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && (viewItem == LocalBranch || viewItem == RemoteBranch)"
 				},
 				{
 					"command": "git-branches.copyCommitHash",
@@ -237,12 +237,12 @@
 				},
 				{
 					"command": "git-branches.switchToBranch",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == LocalBranch",
 					"group": "inline@2"
 				},
 				{
 					"command": "git-branches.switchToBranch",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch"
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == LocalBranch"
 				}
 			]
 		},
@@ -254,7 +254,7 @@
 						"order": 101,
 						"title": "Include Remote Branches",
 						"type": "boolean",
-						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may slow down the extension, or even unusable if the repository contains many branches (e.g. vscode with thousands of remote branches!). This should only be toggled on for smaller projects.",
+						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may slow down the extension, or even unusable if the repository contains many branches (e.g. vscode with thousands of remote branches!). This should only be toggled on for smaller projects.\nAlso, manual reloads are required for remote branches.",
 						"default": false,
 						"scope": "resource"
 					},
@@ -304,8 +304,8 @@
 						"type": "number",
 						"minimum": 1000,
 						"maximum": 120000,
-						"description": "Delay before performing the next forced Git fetch to update the view in ms. Normally the view would automatically be updated by events, so this should not be crucial. Otherwise, manually reloading the view would suffice.",
-						"default": 30000
+						"description": "Delay before performing the next forced Git fetch to update the view in ms. Usually event listeners would be suffice, manually reloading the view is only required for remote branches.",
+						"default": 10000
 					}
 				}
 			}

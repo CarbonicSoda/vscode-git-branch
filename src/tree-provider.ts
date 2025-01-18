@@ -109,21 +109,22 @@ export namespace TreeProvider {
 			}
 			this.gitRunner = new GitRunner(this.gitPath, this.currRepo.rootUri.fsPath);
 
-			this.commitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
-
-			if ((await this.gitRunner.getLatestHash()) === "None") return;
+			if ((await this.gitRunner.getLatestHash()) === "None") {
+				this.commitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
+				return;
+			}
 			commands.executeCommand("setContext", "git-branches.noCommits", false);
 
-			const logHEAD = `${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`;
+			const logsPath = `${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`;
 			while (true) {
 				try {
-					accessSync(logHEAD, constants.R_OK);
+					accessSync(logsPath, constants.R_OK);
 					break;
 				} catch {
 					await new Promise((res) => setTimeout(res, 1000));
 				}
 			}
-			this.logListener = Janitor.add(watch(logHEAD, "buffer", () => this.reload()));
+			this.logListener = Janitor.add(watch(logsPath, "buffer", () => this.reload()));
 			await this.loadItems();
 		}
 
