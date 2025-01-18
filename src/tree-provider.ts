@@ -1,3 +1,4 @@
+import { watch } from "node:fs";
 import {
 	commands,
 	Event,
@@ -105,9 +106,8 @@ export namespace TreeProvider {
 			}
 			if (!this.currRepo) return;
 
-			//MO NOTES cannot listen to git commits in cli but only in scm gui
-			this.repoCommitListener = Janitor.add(this.currRepo.onDidCommit(() => this.reload()));
-
+			Janitor.add(watch(`${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`, "buffer", () => this.reload()));
+			
 			await this.loadItems();
 		}
 

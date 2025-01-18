@@ -8,11 +8,12 @@ export namespace Janitor {
 	export type Id = number;
 
 	/**
-	 * Type with `dispose()` function signature
+	 * Type with `dispose()` / `close()` function signature
 	 */
 	export type DisposableLike = {
 		[any: string]: any;
-		dispose(...args: any): any;
+		dispose?(...args: any): any;
+		close?(...args: any): any;
 	};
 
 	export const managed: (DisposableLike | NodeJS.Timeout)[][] = [];
@@ -41,9 +42,9 @@ export namespace Janitor {
 	export function clear(id: Id): void {
 		if (!managed[id] || managed[id].length === 0) return;
 		for (const instance of managed[id]) {
-			if ((<{ dispose?: (...args: any) => any }>instance).dispose) {
-				(<{ dispose: (...args: any) => any }>instance).dispose();
-				continue;
+			if ((<DisposableLike>instance).dispose || (<DisposableLike>instance).close) {
+				(<DisposableLike>instance).dispose?.();
+				(<DisposableLike>instance).close?.();
 			}
 			clearTimeout(<NodeJS.Timeout>instance);
 		}

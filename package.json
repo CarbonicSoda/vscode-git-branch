@@ -244,8 +244,8 @@
 						"type": "number",
 						"minimum": 1000,
 						"maximum": 120000,
-						"description": "Delay before performing the next forced Git fetch to update the view in ms.",
-						"default": 10000
+						"description": "Delay before performing the next forced Git fetch to update the view in ms. Normally the view would automatically be updated by events, so this should not be crucial. Otherwise, manually reloading the view would suffice.",
+						"default": 30000
 					}
 				}
 			}
