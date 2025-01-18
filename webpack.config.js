@@ -36,8 +36,7 @@ const config = {
 		],
 	},
 	optimization: {
-		//MO DEV
-		// minimize: true,
+		minimize: true,
 		minimizer: [new terserPlugin()],
 	},
 };

@@ -9,9 +9,8 @@
 
 		"strict": true,
 		"strictNullChecks": false,
-		//MO DEV
-		// "noUnusedLocals": true,
-		// "noUnusedParameters": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"removeComments": true,
 		"noFallthroughCasesInSwitch": true,
 		"forceConsistentCasingInFileNames": true,
