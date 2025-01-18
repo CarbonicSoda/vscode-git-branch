@@ -146,6 +146,20 @@
 				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && !git-branches.noBranches",
 				"icon": "$(fold)",
 				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.copyBranchName",
+				"title": "Copy Branch Name",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+				"icon": "$(copy)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branches.copyCommitHash",
+				"title": "Copy Full Commit Hash",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Commit",
+				"icon": "$(copy)",
+				"category": "Git Branches"
 			}
 		],
 		"keybindings": [
@@ -176,6 +190,18 @@
 					"command": "git-branches.toggleViewFold",
 					"when": "view == git-branches.gitBranches",
 					"group": "navigation@3"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "git-branches.copyBranchName",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Branch",
+					"group": "inline@1"
+				},
+				{
+					"command": "git-branches.copyCommitHash",
+					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branches.gitBranches.visible && git-branches.loaded && viewItem == Commit",
+					"group": "inline@1"
 				}
 			]
 		},

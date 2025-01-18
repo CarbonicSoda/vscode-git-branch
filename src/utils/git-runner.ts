@@ -64,8 +64,7 @@ export class GitRunner {
 	}
 
 	async getMergeBaseHash(branch1: Branch, branch2: Branch): Promise<string> {
-		let hash = await this.run("merge-base", branch1.ref, branch2.ref);
-		return hash.slice(0, 7);
+		return await this.run("merge-base", branch1.ref, branch2.ref);
 	}
 
 	async getBranchDiff(

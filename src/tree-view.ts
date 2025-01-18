@@ -1,4 +1,4 @@
-import { commands, ThemeIcon, TreeItem, TreeItemCollapsibleState, TreeView, window } from "vscode";
+import { commands, env, ThemeIcon, TreeItem, TreeItemCollapsibleState, TreeView, window } from "vscode";
 
 import { TreeProvider } from "./tree-provider";
 import { ConfigMaid } from "./utils/config-maid";
@@ -41,6 +41,13 @@ export namespace BranchesTreeView {
 			commands.registerCommand("git-branches.switchRepo", switchRepo),
 			commands.registerCommand("git-branches.reloadView", () => provider.reload()),
 			commands.registerCommand("git-branches.toggleViewFold", toggleViewFold),
+
+			commands.registerCommand("git-branches.copyBranchName", (branchItem: TreeItems.BranchItem) =>
+				env.clipboard.writeText(branchItem.branch.id),
+			),
+			commands.registerCommand("git-branches.copyCommitHash", (commitItem: TreeItems.CommitItem) =>
+				env.clipboard.writeText(commitItem.hash),
+			),
 		);
 
 		await provider.init();

@@ -6,6 +6,7 @@ export namespace TreeItems {
 	export const SEP_ITEM = new TreeItem("", TreeItemCollapsibleState.None);
 
 	export class BranchItem extends TreeItem {
+		contextValue = "Branch";
 		children: (BranchItem | TreeItem)[] = [];
 
 		type: "local" | "remote";
@@ -40,9 +41,7 @@ export namespace TreeItems {
 	}
 
 	export class CommitItem extends TreeItem {
-		get hashShort(): string {
-			return this.hash.slice(0, 7);
-		}
+		contextValue = "Commit";
 
 		constructor(public hash: string) {
 			super({

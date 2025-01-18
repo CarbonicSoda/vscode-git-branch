@@ -107,7 +107,7 @@ export namespace TreeProvider {
 			if (!this.currRepo) return;
 
 			Janitor.add(watch(`${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`, "buffer", () => this.reload()));
-			
+
 			await this.loadItems();
 		}
 
@@ -208,7 +208,7 @@ export namespace TreeProvider {
 
 				const lastUpdated = await this.gitRunner.getUpdatedTime(branch, "local");
 				item.tooltip = new MarkdownString(
-					`$(${iconId}) ${Aux.string.capital(branch.type)} - ${branch.isCurrent ? "__*__ " : ""}${
+					`$(${iconId}) ${Aux.string.capital(branch.type)} $(dash) ${branch.isCurrent ? "*" : ""}${
 						branch.id
 					}  \nLatest Commit __${item.latestHashShort}__  \nUpdated ${lastUpdated}`,
 				);
@@ -254,8 +254,8 @@ export namespace TreeProvider {
 					child.tooltip = new MarkdownString(
 						`${(<MarkdownString>other.tooltip).value}\n\n${
 							isMerged ? `Fully Merged` : "From $(arrow-down) " + child.branchDiff.fromCnt
-						} __-__ To $(arrow-up) ${child.branchDiff.toCnt} ${
-							isMerged ? "" : " __-__ Sym $(arrow-swap) " + child.branchDiff.symCnt
+						} $(dash) To $(arrow-up) ${child.branchDiff.toCnt} ${
+							isMerged ? "" : " $(dash) Sym $(arrow-swap) " + child.branchDiff.symCnt
 						}  \nMerge Base __${child.mergeBaseHashShort}__`,
 						true,
 					);
@@ -320,7 +320,7 @@ export namespace TreeProvider {
 					`${(<MarkdownString>self.tooltip).value}\n\n` +
 						(self.fullyMerged
 							? "Fully Merged"
-							: `Merged $(check) ${mergedItems.length} __-__ Unmerged $(x) ${unmergedItems.length}`),
+							: `Merged $(check) ${mergedItems.length} $(dash) Unmerged $(x) ${unmergedItems.length}`),
 					true,
 				);
 			});
