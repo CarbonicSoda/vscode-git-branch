@@ -106,7 +106,10 @@ export namespace TreeProvider {
 			}
 			if (!this.currRepo) return;
 
-			Janitor.add(watch(`${this.currRepo.rootUri.fsPath}/.git/logs/HEAD`, "buffer", () => this.reload()));
+			//MO NOTE file does not exist without a single commit
+			try {
+				Janitor.add(watch(`${this.currRepo.rootUri.path}/.git/logs/HEAD`, "buffer", () => this.reload()));
+			} catch {}
 
 			await this.loadItems();
 		}
