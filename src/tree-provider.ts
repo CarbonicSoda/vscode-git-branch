@@ -235,7 +235,8 @@ export namespace TreeProvider {
 			const items: TreeItems.BranchItem[] = localCurrent.concat(localItems, remoteCurrent, remoteItems);
 			commands.executeCommand("setContext", "git-branch-master.noBranches", items.length === 0);
 
-			await Aux.async.map(items, async (self, i) => {
+			for (let i = 0; i < items.length; i++) {
+				const self = items[i];
 				const selfBranch = self.branch;
 
 				let mergedItems: TreeItems.BranchItem[] = [];
@@ -273,7 +274,9 @@ export namespace TreeProvider {
 				mergedItems = mergedItems.flat();
 				unmergedItems = unmergedItems.flat();
 
-				await Aux.async.map(unmergedItems, async (item, j) => {
+				for (let j = 0; j < unmergedItems.length; j++) {
+					const item = unmergedItems[j];
+
 					const latestFromItem = new TreeItems.CommitItem(item.latestHash, item);
 					latestFromItem.description = "^Latest";
 					latestFromItem.tooltip = new MarkdownString(
@@ -311,7 +314,7 @@ export namespace TreeProvider {
 						mergeBaseItem,
 						...Aux.array.opt(j < unmergedItems.length - 1, TreeItems.SEP_ITEM),
 					];
-				});
+				}
 
 				self.children = [].concat(
 					mergedItems,
@@ -330,7 +333,7 @@ export namespace TreeProvider {
 							: `Merged $(check) ${mergedItems.length} $(dash) Unmerged $(x) ${unmergedItems.length}`),
 					true,
 				);
-			});
+			}
 
 			return [].concat(
 				localCurrent,

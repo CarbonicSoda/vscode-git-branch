@@ -17,13 +17,6 @@ export namespace Aux.async {
 	): Promise<Awaited<C>[]> {
 		return await Promise.all([...iterable].map(callback));
 	}
-
-	/**
-	 * Sugar for Promise.all((await range(`n`)).map(`async (i) => {...}`))
-	 */
-	export async function range<T>(n: number, callback: (i: number) => Promise<T>): Promise<Awaited<T>[]> {
-		return await map(Array(n).keys(), callback);
-	}
 }
 
 /**

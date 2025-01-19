@@ -6,6 +6,14 @@ import VSCodeColors from "../json/vscode-colors.json";
  * Functions to return {@link ThemeColor} from sRGB or string-hash
  */
 export namespace VSColors {
+	const VSCodeColorsRgb: { [themeKind: string]: { [colorName: string]: RGB3 } } = {};
+	for (const [themeKind, colors] of Object.entries(VSCodeColors)) {
+		VSCodeColorsRgb[themeKind] = {};
+		for (const [colorName, hex] of Object.entries(colors)) {
+			VSCodeColorsRgb[themeKind][colorName] = hexToRgb(hex);
+		}
+	}
+
 	/**
 	 * RGB entry
 	 */
@@ -28,11 +36,13 @@ export namespace VSColors {
 	 * @param RGBorHEX `RGB3`: [R, G, B], `"#rrggbb"` or `"#rgb"` (case insensitive, "#" could be omitted)
 	 */
 	export function interpolate(RGBorHEX: RGB3 | string): ThemeColor {
-		const rgb = typeof RGBorHEX === "string" ? HEXtoRGB(RGBorHEX) : RGBorHEX;
+		const rgb = typeof RGBorHEX === "string" ? hexToRgb(RGBorHEX) : RGBorHEX;
 		const colorThemeKind = ColorThemeKind[window.activeColorTheme.kind];
-		let bestDist = 999999;
+		let bestDist = Number.MAX_SAFE_INTEGER;
 		let best = "";
-		for (const [colorName, colorRgb] of Object.entries(VSCodeColors[<keyof typeof VSCodeColors>colorThemeKind])) {
+		for (const [colorName, colorRgb] of Object.entries(
+			VSCodeColorsRgb[<keyof typeof VSCodeColorsRgb>colorThemeKind],
+		)) {
 			let dist = 0;
 			for (let i = 0; i < 3; i++) dist += (rgb[i] - colorRgb[i]) ** 2;
 			if (dist < bestDist) {
@@ -72,7 +82,7 @@ export namespace VSColors {
 	 * Converts `hex` to `RGB3`
 	 * @param hex `"#rrggbb"` or `"#rgb"` (case insensitive, "#" could be omitted)
 	 */
-	function HEXtoRGB(hex: string): RGB3 {
+	function hexToRgb(hex: string): RGB3 {
 		hex = hex.replace("#", "");
 		if (hex.length === 3) hex = hex[0].repeat(2) + hex[1].repeat(2) + hex[2].repeat(2);
 		return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
