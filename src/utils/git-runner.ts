@@ -50,7 +50,7 @@ export class GitRunner {
 		if (options?.sort === "Commit Date") {
 			const timestamps: { [branchName: string]: number } = {};
 			await Aux.async.map(branches, async ({ id, ref }) => {
-				timestamps[id] = parseInt(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
+				timestamps[id] = Number(await this.run("log", "-1", "--format=%cd", "--date=unix", ref));
 			});
 			branches.sort((a, b) => timestamps[b.id] - timestamps[a.id]);
 		}
