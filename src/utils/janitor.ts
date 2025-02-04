@@ -42,9 +42,9 @@ export namespace Janitor {
 	export function clear(id: Id): void {
 		if (!managed[id] || managed[id].length === 0) return;
 		for (const instance of managed[id]) {
-			if ((<DisposableLike>instance).dispose || (<DisposableLike>instance).close) {
-				(<DisposableLike>instance).dispose?.();
-				(<DisposableLike>instance).close?.();
+			if ("dispose" in instance || "close" in instance) {
+				instance.dispose?.();
+				instance.close?.();
 			}
 			clearTimeout(<NodeJS.Timeout>instance);
 		}
