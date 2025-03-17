@@ -1,4 +1,5 @@
 src
+media/demo.png
 .vscode
 .gitignore
 eslint.config.mjs
