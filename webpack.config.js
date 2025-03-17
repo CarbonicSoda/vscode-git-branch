@@ -37,7 +37,16 @@ const config = {
 	},
 	optimization: {
 		minimize: true,
-		minimizer: [new terserPlugin()],
+		minimizer: [
+			new terserPlugin({
+				extractComments: false,
+				terserOptions: {
+					compress: {
+						passes: 3,
+					},
+				},
+			}),
+		],
 	},
 };
 
