@@ -1,11 +1,9 @@
-<h3 align="center" style="margin-bottom: -10px">
-	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="git branches icon">
+<h3 align="center">
+	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="Git Branches Icon" />
 	<p></p>
 	Git Branch Master for VSCode
 </h3>
 <h4 align="center">Level up Inspector for Git Branches</h4>
-
----
 
 ### Overview
 
@@ -20,7 +18,6 @@ _Features are not limited to..._
 -   Get live status updates as changes occur;
 -   Monitor updates from remote branches;
 
-
 ### Demo
 
 ![DEMO](https://github.com/CarbonicSoda/vscode-git-branch-master/blob/master/media/demo.png?raw=true)
@@ -29,8 +26,8 @@ _Features are not limited to..._
 > through item actions.
 
 > Hovering on view items will give even more details!  
-> __i.e.__ For a branch, shows updated date etc.  
-> __i.e.__ For a commit, shows commits of the branch from merge base.
+> **i.e.** For a branch, shows updated date etc.  
+> **i.e.** For a commit, shows commits of the branch from merge base.
 
 ---
 
