@@ -5,7 +5,7 @@
 </h3>
 <h4 align="center">Level up Inspector for Git Branches</h4>
 
-### Overview
+## Overview
 
 Git branches enable parallel development but can create messiness.  
 _Git Branch Master_ helps you inspect merge statuses, identify merge bases, and track incoming and outgoing changes for a cleaner workflow.
@@ -18,7 +18,7 @@ _Features are not limited to..._
 -   Get live status updates as changes occur;
 -   Monitor updates from remote branches;
 
-### Demo
+## Demo
 
 ![DEMO](https://github.com/CarbonicSoda/vscode-git-branch-master/blob/master/media/demo.png?raw=true)
 
