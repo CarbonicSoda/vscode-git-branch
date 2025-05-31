@@ -1,3 +1,5 @@
+//MO TODO cleanup
+
 export namespace Aux.array {
 	export function opt<T>(check: boolean, arg: T): [T] | [] {
 		return check ? [arg] : [];
@@ -28,10 +30,12 @@ export namespace Aux.string {
 	 * @returns "s" if countable is plural or else ""
 	 */
 	export const plural = (countable: number | any[]) => {
-		return (typeof countable === "number" ? countable : countable.length) === 1 ? "" : "s";
+		return (typeof countable === "number" ? countable : countable.length) === 1
+			? ""
+			: "s";
 	};
 
-	export const capital = (word: string) => {
+	export const formal = (word: string) => {
 		return word[0].toUpperCase() + word.slice(1);
 	};
 }

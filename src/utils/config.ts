@@ -5,7 +5,7 @@ import { Janitor } from "./janitor";
 /**
  * Simplified functions for config related tasks
  */
-export namespace ConfigMaid {
+export namespace Config {
 	let userConfigs = workspace.getConfiguration();
 
 	export function get(configName: string): any {
@@ -16,11 +16,17 @@ export namespace ConfigMaid {
 	 * @param callback supplied with the new config values in order of appearance in `configs`
 	 * @returns `id` for {@link Janitor.clear()}
 	 */
-	export function onChange(configs: string | string[], callback: (...newValues: any[]) => any): number {
+	export function onChange(
+		configs: string | string[],
+		callback: (...newValues: any[]) => any,
+	): number {
 		const _configs = [configs].flat();
+
 		const onChangeConfig = workspace.onDidChangeConfiguration((ev) => {
 			if (!_configs.some((config) => ev.affectsConfiguration(config))) return;
+
 			userConfigs = workspace.getConfiguration();
+
 			callback(..._configs.map(get));
 		});
 		return Janitor.add(onChangeConfig);
@@ -32,16 +38,24 @@ export namespace ConfigMaid {
 	 * Also, the new timeout would only start after completion of callback
 	 * @returns `id` for {@link Janitor.clear()}
 	 */
-	export function schedule(callback: () => any, delayConfigName: string): number {
-		const id = Janitor.currId++;
+	export function schedule(
+		callback: () => any,
+		delayConfigName: string,
+	): number {
+		const id = Janitor.currentId++;
+
 		const startSchedule = async () => {
 			await callback();
 			next();
 		};
-		const next = () => Janitor.override(id, setTimeout(startSchedule, get(delayConfigName)));
 
-		next();
+		const next = () => {
+			Janitor.override(id, setTimeout(startSchedule, get(delayConfigName)));
+		};
+
 		onChange(delayConfigName, next);
+		next();
+
 		return id;
 	}
 
