@@ -24,11 +24,13 @@ export default [
 					format: ["camelCase", "PascalCase"],
 				},
 			],
-
 			"curly": ["warn", "multi-line"],
 			"eqeqeq": "warn",
 			"no-throw-literal": "warn",
 			"semi": "warn",
+			"no-unused-expressions": "warn",
+			"no-unused-labels": "warn",
+			"no-unused-vars": "warn",
 		},
 	},
 ];
