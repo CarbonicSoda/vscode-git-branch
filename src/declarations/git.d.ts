@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri, Event, Disposable, ProviderResult, Command, CancellationToken } from "vscode";
+import {
+	Uri,
+	Event,
+	Disposable,
+	ProviderResult,
+	Command,
+	CancellationToken,
+} from "vscode";
 export { ProviderResult } from "vscode";
 
 export interface Git {
@@ -30,6 +37,7 @@ export interface Ref {
 	readonly type: RefType;
 	readonly name?: string;
 	readonly commit?: string;
+	readonly commitDetails?: Commit;
 	readonly remote?: string;
 }
 
@@ -144,6 +152,7 @@ export interface LogOptions {
 	readonly sortByAuthorDate?: boolean;
 	readonly shortStats?: boolean;
 	readonly author?: string;
+	readonly grep?: string;
 	readonly refNames?: string[];
 	readonly maxParents?: number;
 	readonly skip?: number;
@@ -198,6 +207,7 @@ export interface Repository {
 	readonly ui: RepositoryUIState;
 
 	readonly onDidCommit: Event<void>;
+	readonly onDidCheckout: Event<void>;
 
 	getConfigs(): Promise<{ key: string; value: string }[]>;
 	getConfig(key: string): Promise<string>;
@@ -205,8 +215,13 @@ export interface Repository {
 	unsetConfig(key: string): Promise<string>;
 	getGlobalConfig(key: string): Promise<string>;
 
-	getObjectDetails(treeish: string, path: string): Promise<{ mode: string; object: string; size: number }>;
-	detectObjectType(object: string): Promise<{ mimetype: string; encoding?: string }>;
+	getObjectDetails(
+		treeish: string,
+		path: string,
+	): Promise<{ mode: string; object: string; size: number }>;
+	detectObjectType(
+		object: string,
+	): Promise<{ mimetype: string; encoding?: string }>;
 	buffer(ref: string, path: string): Promise<Buffer>;
 	show(ref: string, path: string): Promise<string>;
 	getCommit(ref: string): Promise<Commit>;
@@ -234,13 +249,19 @@ export interface Repository {
 	createBranch(name: string, checkout: boolean, ref?: string): Promise<void>;
 	deleteBranch(name: string, force?: boolean): Promise<void>;
 	getBranch(name: string): Promise<Branch>;
-	getBranches(query: BranchQuery, cancellationToken?: CancellationToken): Promise<Ref[]>;
+	getBranches(
+		query: BranchQuery,
+		cancellationToken?: CancellationToken,
+	): Promise<Ref[]>;
 	getBranchBase(name: string): Promise<Branch | undefined>;
 	setBranchUpstream(name: string, upstream: string): Promise<void>;
 
 	checkIgnore(paths: string[]): Promise<Set<string>>;
 
-	getRefs(query: RefQuery, cancellationToken?: CancellationToken): Promise<Ref[]>;
+	getRefs(
+		query: RefQuery,
+		cancellationToken?: CancellationToken,
+	): Promise<Ref[]>;
 
 	getMergeBase(ref1: string, ref2: string): Promise<string | undefined>;
 
@@ -257,7 +278,12 @@ export interface Repository {
 	fetch(options?: FetchOptions): Promise<void>;
 	fetch(remote?: string, ref?: string, depth?: number): Promise<void>;
 	pull(unshallow?: boolean): Promise<void>;
-	push(remoteName?: string, branchName?: string, setUpstream?: boolean, force?: ForcePushMode): Promise<void>;
+	push(
+		remoteName?: string,
+		branchName?: string,
+		setUpstream?: boolean,
+		force?: ForcePushMode,
+	): Promise<void>;
 
 	blame(path: string): Promise<string>;
 	log(options?: LogOptions): Promise<Commit[]>;
@@ -329,6 +355,29 @@ export interface BranchProtectionProvider {
 	provideBranchProtection(): BranchProtection[];
 }
 
+export interface AvatarQueryCommit {
+	readonly hash: string;
+	readonly authorName?: string;
+	readonly authorEmail?: string;
+}
+
+export interface AvatarQuery {
+	readonly commits: AvatarQueryCommit[];
+	readonly size: number;
+}
+
+export interface SourceControlHistoryItemDetailsProvider {
+	provideAvatar(
+		repository: Repository,
+		query: AvatarQuery,
+	): ProviderResult<Map<string, string | undefined>>;
+	provideHoverCommands(repository: Repository): ProviderResult<Command[]>;
+	provideMessageLinks(
+		repository: Repository,
+		message: string,
+	): ProviderResult<string>;
+}
+
 export type APIState = "uninitialized" | "initialized";
 
 export interface PublishEvent {
@@ -347,15 +396,24 @@ export interface API {
 
 	toGitUri(uri: Uri, ref: string): Uri;
 	getRepository(uri: Uri): Repository | null;
+	getRepositoryRoot(uri: Uri): Promise<Uri | null>;
 	init(root: Uri, options?: InitOptions): Promise<Repository | null>;
 	openRepository(root: Uri): Promise<Repository | null>;
 
 	registerRemoteSourcePublisher(publisher: RemoteSourcePublisher): Disposable;
 	registerRemoteSourceProvider(provider: RemoteSourceProvider): Disposable;
 	registerCredentialsProvider(provider: CredentialsProvider): Disposable;
-	registerPostCommitCommandsProvider(provider: PostCommitCommandsProvider): Disposable;
+	registerPostCommitCommandsProvider(
+		provider: PostCommitCommandsProvider,
+	): Disposable;
 	registerPushErrorHandler(handler: PushErrorHandler): Disposable;
-	registerBranchProtectionProvider(root: Uri, provider: BranchProtectionProvider): Disposable;
+	registerBranchProtectionProvider(
+		root: Uri,
+		provider: BranchProtectionProvider,
+	): Disposable;
+	registerSourceControlHistoryItemDetailsProvider(
+		provider: SourceControlHistoryItemDetailsProvider,
+	): Disposable;
 }
 
 export interface GitExtension {
@@ -377,11 +435,13 @@ export interface GitExtension {
 
 export const enum GitErrorCodes {
 	BadConfigFile = "BadConfigFile",
+	BadRevision = "BadRevision",
 	AuthenticationFailed = "AuthenticationFailed",
 	NoUserNameConfigured = "NoUserNameConfigured",
 	NoUserEmailConfigured = "NoUserEmailConfigured",
 	NoRemoteRepositorySpecified = "NoRemoteRepositorySpecified",
 	NotAGitRepository = "NotAGitRepository",
+	NotASafeGitRepository = "NotASafeGitRepository",
 	NotAtRepositoryRoot = "NotAtRepositoryRoot",
 	Conflict = "Conflict",
 	StashConflict = "StashConflict",
