@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { extensions } from "vscode";
-import { GitExtension } from "../declarations/git";
+
+import { GitExtension, Repository } from "../declarations/git";
 
 type BranchType = "local" | "remote";
 
@@ -18,25 +19,22 @@ export class Branch {
 }
 
 export class GitRunner {
-	static get gitPath(): string | undefined {
+	get gitPath(): string {
 		const gitExtension =
-			extensions.getExtension<GitExtension>("vscode.git")?.exports;
-		const gitExtensionApi = gitExtension?.getAPI(1);
+			extensions.getExtension<GitExtension>("vscode.git")!.exports;
+		const gitExtensionApi = gitExtension.getAPI(1);
 
-		return gitExtensionApi?.git.path;
+		return gitExtensionApi.git.path;
 	}
 
-	constructor(public repoPath: string) {}
+	constructor(public repo: Repository) {}
 
-	async run(command: string, ...args: string[]): Promise<string | undefined> {
-		const gitPath = GitRunner.gitPath;
-		if (!gitPath) return;
-
+	async run(command: string, ...args: string[]): Promise<string> {
 		return await new Promise((res, rej) => {
 			execFile(
-				gitPath,
+				this.gitPath,
 				[command].concat(args),
-				{ cwd: this.repoPath },
+				{ cwd: this.repo.rootUri.fsPath },
 				(err, stdout) => (err ? rej(err) : res(stdout.trimEnd())),
 			);
 		});
@@ -48,10 +46,9 @@ export class GitRunner {
 		const res = await this.run(
 			"branch",
 			`-${type[0]}`,
-			"--format='%(refname)%(HEAD)'",
+			"--format=%(refname)%(HEAD)",
 			"--omit-empty",
 		);
-		if (!res) return [];
 
 		for (let ref of res.split("\n").map((line) => line.trimEnd())) {
 			if (ref.endsWith("/HEAD")) continue;

@@ -1,9 +1,9 @@
 import { Janitor } from "./utils/janitor";
 
-import { BranchesTreeView } from "./tree-view";
+import { TreeView } from "./tree-view";
 
 export function activate(): void {
-	BranchesTreeView.init();
+	TreeView.init();
 }
 
 export function deactivate() {

@@ -1,6 +1,6 @@
 {
 	"name": "git-branch-master",
-	"displayName": "Git Branch",
+	"displayName": "Git Branches",
 	"description": "Level up Inspector for Git Branches",
 	"version": "1.0.7",
 	"publisher": "carbonsoda",
@@ -46,178 +46,14 @@
 		}
 	},
 	"contributes": {
-		"viewsContainers": {
-			"activitybar": [
-				{
-					"id": "gitBranchMaster",
-					"title": "Branch Master",
-					"icon": "$(merge)"
-				}
-			]
-		},
 		"views": {
-			"gitBranchMaster": [
+			"scm": [
 				{
-					"id": "git-branch-master.gitBranchMaster",
-					"name": "Branch Master"
-				}
-			]
-		},
-		"viewsWelcome": [
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "Git is not enabled or not installed. Install and enable Git to use this extension.",
-				"when": "!config.git.enabled || git.missing"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "You have not yet opened a repository.\n[Open Folder](command:workbench.action.files.openFolder)\n[Clone Repository](command:git.clone)\nOpening a folder will close all currently open editors. To keep them open, [add a folder](command:workbench.action.addRootFolder) instead.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount == 0 && openFolderWorkspaceSupport"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "You have not yet opened a repository.\n[Open Folder](command:workbench.action.files.openFolderViaWorkspace)\n[Clone Repository](command:git.clone)\nOpening a folder will close all currently open editors. To keep them open, [add a folder](command:workbench.action.addRootFolder) instead.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount == 0 && !openFolderWorkspaceSupport && workbenchState == workspace"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "Waiting for Git to initialize...",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state != initialized"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable this extension powered by Git.\n[Initialize Repository](command:git.init)",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount == 0"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "Fetching data from Git...\n\nThis might take a while depending on the number of branches your repository has.\n\nIf this is taking too long, [inspect configurations](command:workbench.action.openSettings?[\"git-branch-master\"]).",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branch-master.loaded && !git-branch-master.noCommits"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "The current Git repository does not have an initial commit.\n\nCheck back and reload later.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && !git-branch-master.loaded && git-branch-master.noCommits"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "The current repository only has a single active branch. The extension is only useful for repositories with multiple branches!\n\nCheck back and reload later.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branch-master.loaded && git-branch-master.singleBranch && config.git-branch-master.includeRemotes"
-			},
-			{
-				"view": "git-branch-master.gitBranchMaster",
-				"contents": "The current repository only has a single active branch. The extension is only useful for repositories with multiple branches!\n\nIf you forgot to include remote branches, [enable it](command:workbench.action.openSettings?[\"git-branch-master.view.includeRemotes\"]) and check back.",
-				"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && gitOpenRepositoryCount > 0 && git-branch-master.loaded && git-branch-master.singleBranch && !config.git-branch-master.includeRemotes"
-			}
-		],
-		"commands": [
-			{
-				"command": "git-branch-master.reloadView",
-				"title": "Refresh View",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
-				"icon": "$(refresh)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.switchRepo",
-				"title": "Switch Repository",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && gitOpenRepositoryCount > 1",
-				"icon": "$(repo)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.toggleViewFold",
-				"title": "Toggle View Fold",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
-				"icon": "$(fold)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.copyBranchName",
-				"title": "Copy Branch Name",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && (viewItem == LocalBranch || viewItem == RemoteBranch)",
-				"icon": "$(copy)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.copyCommitHash",
-				"title": "Copy Full Commit Hash",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == Commit",
-				"icon": "$(copy)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.switchToBranch",
-				"title": "Switch to Branch",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == LocalBranch",
-				"icon": "$(arrow-swap)",
-				"category": "Git Branch Master"
-			},
-			{
-				"command": "git-branch-master.toggleRemoteBranches",
-				"title": "Toggle Remote Branches",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
-				"icon": "$(github-alt)",
-				"category": "Git Branch Master"
-			}
-		],
-		"keybindings": [
-			{
-				"command": "git-branch-master.reloadView",
-				"when": "focusedView == 'git-branch-master.gitBranchMaster'",
-				"key": "Ctrl+R"
-			}
-		],
-		"menus": {
-			"view/title": [
-				{
-					"command": "git-branch-master.switchRepo",
-					"when": "view == git-branch-master.gitBranchMaster",
-					"group": "navigation@1"
-				},
-				{
-					"command": "git-branch-master.toggleRemoteBranches",
-					"when": "view == git-branch-master.gitBranchMaster",
-					"group": "navigation@2"
-				},
-				{
-					"command": "git-branch-master.reloadView",
-					"when": "view == git-branch-master.gitBranchMaster",
-					"group": "navigation@3"
-				},
-				{
-					"command": "git-branch-master.toggleViewFold",
-					"when": "view == git-branch-master.gitBranchMaster",
-					"group": "navigation@4"
-				}
-			],
-			"view/item/context": [
-				{
-					"command": "git-branch-master.copyBranchName",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && (viewItem == LocalBranch || viewItem == RemoteBranch)",
-					"group": "inline@1"
-				},
-				{
-					"command": "git-branch-master.copyBranchName",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && (viewItem == LocalBranch || viewItem == RemoteBranch)"
-				},
-				{
-					"command": "git-branch-master.copyCommitHash",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == Commit",
-					"group": "inline@1"
-				},
-				{
-					"command": "git-branch-master.copyCommitHash",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == Commit"
-				},
-				{
-					"command": "git-branch-master.switchToBranch",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == LocalBranch",
-					"group": "inline@2"
-				},
-				{
-					"command": "git-branch-master.switchToBranch",
-					"when": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == LocalBranch"
+					"id": "git-branch-master.gitBranches",
+					"name": "Branches",
+					"contextualTitle": "Git Branches",
+					"icon": "$(merge)",
+					"visibility": "collapsed"
 				}
 			]
 		},
@@ -291,5 +127,6 @@
 		"onlyBuiltDependencies": [
 			"esbuild"
 		]
-	}
+	},
+	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }
