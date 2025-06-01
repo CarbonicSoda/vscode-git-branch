@@ -11,10 +11,10 @@ import {
 import { GitExtension, Repository } from "./declarations/git";
 
 import { TreeItem } from "./tree-item";
+import { Aux } from "./utils/auxiliary";
 import { Colors } from "./utils/colors";
 import { Config } from "./utils/config";
 import { Branch, GitRunner } from "./utils/git";
-import { Aux } from "./utils/auxiliary";
 
 export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	private dataChangeEmitter: EventEmitter<void> = new EventEmitter<void>();
@@ -40,15 +40,16 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	items: TreeItem.PrimaryType[] = [];
 
 	repo: Repository;
+
 	runner: GitRunner;
 
 	constructor() {
-		const gitExtension =
-			extensions.getExtension<GitExtension>("vscode.git")!.exports;
-		const gitExtensionApi = gitExtension.getAPI(1);
+		const gitAPI = extensions
+			.getExtension<GitExtension>("vscode.git")!
+			.exports.getAPI(1);
 
 		const cwd = workspace.workspaceFolders![0]!.uri;
-		this.repo = gitExtensionApi.getRepository(cwd) as Repository;
+		this.repo = gitAPI.getRepository(cwd) as Repository;
 
 		this.runner = new GitRunner(this.repo);
 	}
@@ -70,10 +71,6 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 		this.flush();
 	}
 
-	private ColorHead = Colors.interpolate("00F");
-	private ColorMerged = Colors.interpolate("#0F0");
-	private ColorUnmerged = Colors.interpolate("#F00");
-
 	private async getItems(
 		repo: Repository,
 		expand: {
@@ -81,18 +78,17 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			secondary: boolean;
 		},
 	): Promise<typeof this.items> {
-		const includeRemotes = Config.get(
-			"git-branch-master.includeRemotes",
-		) as boolean;
 		const pinnedBranches = Config.get(
 			"git-branch-master.pinnedBranches",
 		) as string[];
 
+		const colorHead = Colors.interpolate("00F");
+		const colorMerged = Colors.interpolate("#0F0");
+		const colorUnmerged = Colors.interpolate("#F00");
+
 		this.runner = new GitRunner(repo);
 
-		let branches = await this.runner.getBranches(
-			includeRemotes ? "all" : "local",
-		);
+		let branches = await this.runner.getBranches();
 		if (branches.length < 2) return [];
 
 		const groups = Aux.object.group(branches, (branch) => branch.type);
@@ -121,7 +117,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				: branch.type === "local"
 				? "git-branch"
 				: "github-alt";
-			const iconColor = branch.head ? this.ColorHead : Colors.hash(branch.name);
+			const iconColor = branch.head ? colorHead : Colors.hash(branch.name);
 			primary.iconPath = new ThemeIcon(iconId, iconColor);
 
 			const lastCommit = await this.runner.getLastCommit(branch);
@@ -139,21 +135,50 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 		const branchItems = Aux.object.group(primaries, (item) => item.branch.ref);
 
+		const cache: {
+			[key: string]: {
+				branchDiff: {
+					fm: string[];
+					to: string[];
+				};
+				mergeBase: string;
+			};
+		} = {};
+
 		for (const primary of primaries) {
 			await Aux.async.map(branches, async (branch) => {
 				if (primary.branch.ref === branch.ref) return;
 				const branchItem = branchItems.get(branch.ref)![0];
 
-				const branchDiff = await this.runner.getBranchDiff(
-					branch,
-					primary.branch,
-				);
+				const key1 = `${branch.ref}*${primary.branch.ref}`;
+				const key2 = `${primary.branch.ref}*${branch.ref}`;
+
+				const cached = cache[key1] ?? cache[key2];
+
+				if (!cached) {
+					const branchDiff = await this.runner.getBranchDiff(
+						branch,
+						primary.branch,
+					);
+					const isMerged = branchDiff.to.length === 0;
+
+					const mergeBase = isMerged
+						? ""
+						: await this.runner.getMergeBase(branch, primary.branch);
+
+					cache[key1] = { branchDiff, mergeBase };
+				}
+
+				const { branchDiff, mergeBase } = cache[key1] ?? {
+					branchDiff: {
+						fm: cache[key2].branchDiff.to,
+						to: cache[key2].branchDiff.fm,
+					},
+					mergeBase: cache[key2].mergeBase,
+				};
 
 				const isMerged = branchDiff.to.length === 0;
-
-				const mergeBase = isMerged
-					? ""
-					: await this.runner.getMergeBase(primary.branch, branch);
+				const isLatest = branchDiff.fm.length === 0;
 
 				const secondary = new TreeItem.BranchItem<"secondary">(
 					branch,
@@ -168,16 +193,20 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 				secondary.tooltip = new MarkdownString(
 					`${(primary.tooltip as MarkdownString).value}\n\n---\n${
-						isMerged ? "" : `$(arrow-up) ${branchDiff.to.length} $(dash) `
-					}$(arrow-down) ${branchDiff.fm.length}${
-						isMerged ? "" : `  \nMerge Base ${mergeBase.slice(0, 7)}`
-					}\n\n---\n${(branchItem.tooltip as MarkdownString).value}`,
+						isMerged ? "" : `$(arrow-up) ${branchDiff.to.length}`
+					}${isMerged || isLatest ? "" : " $(dash) "}${
+						isLatest ? "" : `$(arrow-down) ${branchDiff.fm.length}`
+					}${
+						isMerged && isLatest
+							? ""
+							: `  \nMerge Base ${mergeBase.slice(0, 7)}\n\n---\n`
+					}${(branchItem.tooltip as MarkdownString).value}`,
 					true,
 				);
 
 				secondary.iconPath = isMerged
-					? new ThemeIcon("check", this.ColorMerged)
-					: new ThemeIcon("x", this.ColorUnmerged);
+					? new ThemeIcon("check", colorMerged)
+					: new ThemeIcon("x", colorUnmerged);
 
 				if (isMerged) return;
 
@@ -187,15 +216,9 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 				lastCommitItem.description = "Last";
 
-				lastCommitItem.tooltip = new MarkdownString(
-					await this.runner.run(
-						"log",
-						"-1",
-						"--format=$(history) Last %h  %n%ad%n%n---%n%B",
-						"--date=format-local:%m/%d/%Y %a %H:%M",
-						lastCommit,
-					),
-					true,
+				lastCommitItem.tooltip = await this.runner.getCommitMd(
+					lastCommit,
+					"Last",
 				);
 
 				const spreadItem = new TreeItem.Separator("", secondary);
@@ -214,16 +237,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 				mergeBaseItem.tooltip = isMerged
 					? "A root commit is N/A"
-					: new MarkdownString(
-							await this.runner.run(
-								"log",
-								"-1",
-								"--format=$(history) Base %h  %n%ad%n%n---%n%B",
-								"--date=format-local:%m/%d/%Y %a %H:%M",
-								mergeBase,
-							),
-							true,
-					  );
+					: await this.runner.getCommitMd(mergeBase, "Base");
 			});
 		}
 
