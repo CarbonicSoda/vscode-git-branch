@@ -1,4 +1,4 @@
-import { TreeItemCollapsibleState, TreeItem as VsTreeItem } from "vscode";
+import { TreeItemCollapsibleState, TreeItem as VSTreeItem } from "vscode";
 
 import { Branch } from "./utils/git";
 
@@ -7,11 +7,15 @@ export namespace TreeItem {
 
 	export type SecondaryType = BranchItem<"secondary">;
 
-	export type ItemType = PrimaryType | SecondaryType;
+	export type InnerType = PrimaryType | SecondaryType;
+
+	export type LeafType = CommitItem | Separator;
+
+	export type ItemType = InnerType | LeafType;
 
 	class ExplorerItem<
 		P extends undefined | ExplorerItem<undefined | ExplorerItem<undefined>>,
-	> extends VsTreeItem {
+	> extends VSTreeItem {
 		constructor(
 			public label: string,
 
@@ -34,7 +38,7 @@ export namespace TreeItem {
 	> extends ExplorerItem<
 		T extends "primary" ? undefined : BranchItem<"primary">
 	> {
-		children: BranchItem<"secondary">[] = [];
+		children: (T extends "primary" ? BranchItem<"secondary"> : LeafType)[] = [];
 
 		constructor(
 			public branch: Branch,
@@ -45,6 +49,18 @@ export namespace TreeItem {
 			super(branch.name, expand, parent);
 
 			this.contextValue = `${branch.type}Branch`;
+		}
+	}
+
+	export class CommitItem extends ExplorerItem<BranchItem<"secondary">> {
+		constructor(public hash: string, parent: BranchItem<"secondary">) {
+			super(hash.slice(0, 7), null, parent);
+		}
+	}
+
+	export class Separator extends ExplorerItem<BranchItem<"secondary">> {
+		constructor(public label: string, parent: BranchItem<"secondary">) {
+			super(label, null, parent);
 		}
 	}
 }
