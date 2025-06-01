@@ -185,11 +185,13 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				const lastCommitItem = new TreeItem.CommitItem(lastCommit, secondary);
 				secondary.children.push(lastCommitItem);
 
+				lastCommitItem.description = "Last";
+
 				lastCommitItem.tooltip = new MarkdownString(
 					await this.runner.run(
 						"log",
 						"-1",
-						"--format=$(history) %h  %n%ad%n%n---%n%B",
+						"--format=$(history) Last %h  %n%ad%n%n---%n%B",
 						"--date=format-local:%m/%d/%Y %a %H:%M",
 						lastCommit,
 					),
@@ -208,13 +210,15 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 					: new TreeItem.CommitItem(mergeBase, secondary);
 				secondary.children.push(mergeBaseItem);
 
+				mergeBaseItem.description = "Base";
+
 				mergeBaseItem.tooltip = isMerged
 					? "A root commit is N/A"
 					: new MarkdownString(
 							await this.runner.run(
 								"log",
 								"-1",
-								"--format=$(history) %h  %n%ad%n%n---%n%B",
+								"--format=$(history) Base %h  %n%ad%n%n---%n%B",
 								"--date=format-local:%m/%d/%Y %a %H:%M",
 								mergeBase,
 							),
