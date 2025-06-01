@@ -59,33 +59,24 @@
 		},
 		"configuration": [
 			{
-				"title": "Git Branch Master",
+				"title": "Git Branches",
 				"properties": {
-					"git-branch-master.includeRemotes": {
-						"order": 101,
-						"title": "Include Remote Branches",
-						"type": "boolean",
-						"description": "Include remote branches in the view by default.\n\nIncluding remote branches may slow down the extension, or even unusable if the repository contains many branches (e.g. vscode with thousands of remote branches!). This should only be toggled on for smaller projects.\nAlso, manual reloads are required for remote branches.",
-						"default": false,
-						"scope": "resource"
-					},
 					"git-branch-master.pinnedBranches": {
-						"order": 201,
+						"order": 1,
 						"title": "Pinned Branches",
 						"type": "array",
 						"items": {
 							"type": "string"
 						},
-						"description": "Branches that would be pinned on top of the view, if exists, in the order given below.\nRemote versions of entries e.g. <origin>/<master> will alse be pinned given <master>.",
+						"uniqueItems": true,
+						"description": "Branches that would be pinned on the top of the view.",
 						"default": [
 							"master",
 							"main"
-						],
-						"uniqueItems": true,
-						"scope": "resource"
+						]
 					},
 					"git-branch-master.fetchDelay": {
-						"order": 301,
+						"order": 2,
 						"title": "Fetch Delay",
 						"type": "number",
 						"minimum": 1000,
@@ -94,6 +85,43 @@
 						"default": 10000
 					}
 				}
+			}
+		],
+		"commands": [
+			{
+				"command": "git-branch-master.refresh",
+				"title": "Refresh Explorer",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
+				"icon": "$(refresh)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branch-master.toggleFold",
+				"title": "Toggle Fold",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
+				"icon": "$(fold)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branch-master.switchRepo",
+				"title": "Switch Repository",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && gitOpenRepositoryCount > 1",
+				"icon": "$(repo)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branch-master.copyBranchName",
+				"title": "Copy Branch Name",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && (viewItem == LocalBranch || viewItem == RemoteBranch)",
+				"icon": "$(copy)",
+				"category": "Git Branches"
+			},
+			{
+				"command": "git-branch-master.copyCommitHash",
+				"title": "Copy Full Commit Hash",
+				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == Commit",
+				"icon": "$(copy)",
+				"category": "Git Branches"
 			}
 		]
 	},

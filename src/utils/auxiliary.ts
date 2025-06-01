@@ -1,5 +1,3 @@
-//MO TODO cleanup
-
 import { Event } from "vscode";
 
 export namespace Aux.object {
@@ -37,9 +35,6 @@ export namespace Aux.array {
 	}
 }
 
-/**
- * Asynchronous operation functions
- */
 export namespace Aux.async {
 	/**
 	 * Sugar for Promise.all(`iterable`.map(`async (ele) => {...}`))
@@ -52,9 +47,6 @@ export namespace Aux.async {
 	}
 }
 
-/**
- * String related functions
- */
 export namespace Aux.string {
 	/**
 	 * @param countable number or object with `.length` property

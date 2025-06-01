@@ -1,15 +1,13 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { extensions } from "vscode";
+import { extensions, MarkdownString } from "vscode";
 
 import { GitExtension, Repository } from "../declarations/git";
 
 const exec = promisify(execFile);
 
-type BranchType = "local" | "remote";
-
 export class Branch {
-	type: BranchType;
+	type: "local" | "remote";
 	name: string;
 
 	constructor(
@@ -39,12 +37,12 @@ export class GitRunner {
 		return res.stdout.trimEnd();
 	}
 
-	async getBranches(type: "all" | BranchType): Promise<Branch[]> {
+	async getBranches(): Promise<Branch[]> {
 		const branches = [];
 
 		const res = await this.run(
 			"branch",
-			`-${type[0]}`,
+			`-a`,
 			"--format=%(refname)%(HEAD)",
 			"--omit-empty",
 		);
@@ -78,7 +76,7 @@ export class GitRunner {
 			"log",
 			"-1",
 			"--format=%cd",
-			"--date=format-local:%m/%d/%Y %a %H:%M",
+			"--date=format-local:%B %d, %Y at %I:%M %p",
 			branch.ref,
 		);
 	}
@@ -107,5 +105,17 @@ export class GitRunner {
 		} catch {
 			return "None";
 		}
+	}
+
+	async getCommitMd(hash: string, tag: string): Promise<MarkdownString> {
+		const md = await this.run(
+			"log",
+			"-1",
+			`--format=$(history) ${tag} %h  %n%ad%n%n---%n%B`,
+			"--date=format-local:%B %d, %Y at %I:%M %p",
+			hash,
+		);
+
+		return new MarkdownString(md, true);
 	}
 }
