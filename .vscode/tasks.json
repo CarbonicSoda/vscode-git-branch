@@ -53,6 +53,12 @@
 			"label": "tasks: watch-tests",
 			"dependsOn": ["npm: watch", "npm: watch-tests"],
 			"problemMatcher": []
+		},
+		{
+			"type": "npm",
+			"script": "run-in-browser",
+			"problemMatcher": [],
+			"label": "npm: run-in-browser"
 		}
 	]
 }

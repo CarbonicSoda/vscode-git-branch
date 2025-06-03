@@ -8,15 +8,15 @@ export namespace Janitor {
 	export type Id = number;
 
 	/**
-	 * Type with `dispose()` or `close()` function signature
+	 * Type with `dispose()` function signature
 	 */
 	export type DisposableLike = {
 		[any: string]: any;
 		dispose(...args: any): any;
 	};
 
-	export let currentId = 0;
 	export const managed: (DisposableLike | NodeJS.Timeout)[][] = [];
+	export let currentId = 0;
 
 	/**
 	 * @param disposableOrTimeout instances to manage

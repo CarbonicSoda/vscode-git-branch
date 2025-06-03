@@ -11,13 +11,17 @@ async function main() {
 		minify: production,
 		sourcemap: !production,
 		sourcesContent: false,
-		platform: "node",
-		outfile: "dist/extension.js",
+		platform: "browser",
+		outdir: "dist/web",
 		external: ["vscode"],
 		logLevel: "silent",
+
+		alias: {
+			"node:fs": "@isomorphic-git/lightning-fs",
+		},
+
 		plugins: [
-			/* add to the end of plugins array */
-			esbuildProblemMatcherPlugin,
+			esbuildProblemMatcherPlugin /* add to the end of plugins array */,
 		],
 	});
 	if (watch) {
@@ -29,6 +33,8 @@ async function main() {
 }
 
 /**
+ * This plugin hooks into the build process to print errors in a format that the problem matcher in
+ * Visual Studio Code can understand.
  * @type {import('esbuild').Plugin}
  */
 const esbuildProblemMatcherPlugin = {

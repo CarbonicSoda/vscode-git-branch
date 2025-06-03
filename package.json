@@ -2,7 +2,7 @@
 	"name": "git-branch-master",
 	"displayName": "Git Branches",
 	"description": "Level up Inspector for Git Branches",
-	"version": "1.0.7",
+	"version": "2.0.0-dev-iso",
 	"publisher": "carbonsoda",
 	"author": {
 		"name": "David W."
@@ -36,15 +36,7 @@
 	],
 	"icon": "media/icon.png",
 	"main": "./dist/extension.js",
-	"extensionDependencies": [
-		"vscode.git"
-	],
-	"capabilities": {
-		"virtualWorkspaces": false,
-		"untrustedWorkspaces": {
-			"supported": false
-		}
-	},
+	"browser": "./dist/web/extension.js",
 	"contributes": {
 		"views": {
 			"scm": [
@@ -57,104 +49,48 @@
 				}
 			]
 		},
-		"configuration": [
-			{
-				"title": "Git Branches",
-				"properties": {
-					"git-branch-master.pinnedBranches": {
-						"order": 1,
-						"title": "Pinned Branches",
-						"type": "array",
-						"items": {
-							"type": "string"
-						},
-						"uniqueItems": true,
-						"description": "Branches that would be pinned on the top of the view.",
-						"default": [
-							"master",
-							"main"
-						]
-					},
-					"git-branch-master.fetchDelay": {
-						"order": 2,
-						"title": "Fetch Delay",
-						"type": "number",
-						"minimum": 1000,
-						"maximum": 120000,
-						"description": "Delay before performing the next forced Git fetch to update the view in ms. Usually event listeners would be suffice, manually reloading the view is only required for remote branches.",
-						"default": 10000
-					}
-				}
-			}
-		],
-		"commands": [
-			{
-				"command": "git-branch-master.refresh",
-				"title": "Refresh Explorer",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
-				"icon": "$(refresh)",
-				"category": "Git Branches"
-			},
-			{
-				"command": "git-branch-master.toggleFold",
-				"title": "Toggle Fold",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible",
-				"icon": "$(fold)",
-				"category": "Git Branches"
-			},
-			{
-				"command": "git-branch-master.switchRepo",
-				"title": "Switch Repository",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && gitOpenRepositoryCount > 1",
-				"icon": "$(repo)",
-				"category": "Git Branches"
-			},
-			{
-				"command": "git-branch-master.copyBranchName",
-				"title": "Copy Branch Name",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && (viewItem == LocalBranch || viewItem == RemoteBranch)",
-				"icon": "$(copy)",
-				"category": "Git Branches"
-			},
-			{
-				"command": "git-branch-master.copyCommitHash",
-				"title": "Copy Full Commit Hash",
-				"enablement": "config.git.enabled && !git.missingg && workspaceFolderCount != 0 && git.state == initialized && view.git-branch-master.gitBranchMaster.visible && git-branch-master.loaded && viewItem == Commit",
-				"icon": "$(copy)",
-				"category": "Git Branches"
-			}
-		]
+		"configuration": [],
+		"commands": []
 	},
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
-		"compile": "pnpm run check-types && pnpm run lint && node esbuild.cjs",
+		"compile": "pnpm run check-types && pnpm run lint && node esbuild.cjs && node esbuild.web.cjs",
 		"watch": "npm-run-all -p watch:*",
 		"watch:esbuild": "node esbuild.cjs --watch",
+		"watch:esbuild-web": "node esbuild.web.cjs --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"package": "pnpm run check-types && pnpm run lint && node esbuild.cjs --production",
+		"package": "pnpm run check-types && pnpm run lint && node esbuild.cjs --production && node esbuild.web.cjs --production",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
 		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
 		"check-types": "tsc --noEmit",
 		"lint": "eslint src",
-		"test": "vscode-test"
+		"test": "vscode-test",
+		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
+	},
+	"dependencies": {
+		"@isomorphic-git/lightning-fs": "^4.6.2",
+		"isomorphic-git": "^1.30.2"
 	},
 	"devDependencies": {
-		"@types/node": "~20.17.11",
+		"@playwright/browser-chromium": "^1.52.0",
+		"@types/node": "~22.15.29",
 		"@types/vscode": "^1.80.0",
-		"@typescript-eslint/eslint-plugin": "^8.19.0",
-		"@typescript-eslint/parser": "^8.19.0",
-		"@vscode/test-cli": "^0.0.10",
-		"@vscode/test-electron": "^2.4.1",
-		"esbuild": "^0.25.1",
-		"eslint": "^9.17.0",
+		"@typescript-eslint/eslint-plugin": "^8.33.1",
+		"@typescript-eslint/parser": "^8.33.1",
+		"@vscode/test-cli": "^0.0.11",
+		"@vscode/test-electron": "^2.5.2",
+		"@vscode/test-web": "^0.0.69",
+		"esbuild": "^0.25.5",
+		"eslint": "^9.28.0",
 		"npm-run-all": "^4.1.5",
-		"typescript": "^5.7.2"
+		"typescript": "^5.8.3"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
+			"@playwright/browser-chromium",
 			"esbuild"
 		]
 	},
-	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
+	"packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
 }

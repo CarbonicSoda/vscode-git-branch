@@ -6,8 +6,11 @@ import { Janitor } from "./janitor";
  * Simplified functions for config related tasks
  */
 export namespace Config {
-	let userConfigs = workspace.getConfiguration();
+	let userConfigs = workspace.getConfiguration("git-branch-master");
 
+	/**
+	 * `configName` should omit "git-branch-master." field prefix
+	 */
 	export function get(configName: string): any {
 		return userConfigs.get(configName);
 	}
@@ -20,15 +23,22 @@ export namespace Config {
 		configs: string | string[],
 		callback: (...newValues: any[]) => any,
 	): number {
-		const _configs = [configs].flat();
+		const _configs = Array.isArray(configs) ? configs : [configs];
 
 		const onChangeConfig = workspace.onDidChangeConfiguration((ev) => {
-			if (!_configs.some((config) => ev.affectsConfiguration(config))) return;
+			if (
+				!ev.affectsConfiguration("git-branch-master") ||
+				!_configs.some((config) =>
+					ev.affectsConfiguration(`git-branch-master.${config}`),
+				)
+			) {
+				return;
+			}
 
-			userConfigs = workspace.getConfiguration();
-
+			userConfigs = workspace.getConfiguration("git-branch-master");
 			callback(..._configs.map(get));
 		});
+
 		return Janitor.add(onChangeConfig);
 	}
 
@@ -48,20 +58,21 @@ export namespace Config {
 			await callback();
 			next();
 		};
-
 		const next = () => {
 			Janitor.override(id, setTimeout(startSchedule, get(delayConfigName)));
 		};
 
-		onChange(delayConfigName, next);
 		next();
+		onChange(delayConfigName, next);
 
 		return id;
 	}
 
 	Janitor.add(
-		workspace.onDidChangeConfiguration(() => {
-			userConfigs = workspace.getConfiguration();
+		workspace.onDidChangeConfiguration((ev) => {
+			if (!ev.affectsConfiguration("git-branch-master")) return;
+
+			userConfigs = workspace.getConfiguration("git-branch-master");
 		}),
 	);
 }
