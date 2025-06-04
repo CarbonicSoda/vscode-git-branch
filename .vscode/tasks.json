@@ -58,7 +58,22 @@
 			"type": "npm",
 			"script": "run-in-browser",
 			"problemMatcher": [],
-			"label": "npm: run-in-browser"
+			"label": "npm: run-in-browser",
+			"presentation": {
+				"reveal": "never",
+				"group": "watchers"
+			}
+		},
+		{
+			"type": "npm",
+			"script": "watch:esbuild-web",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "watch-web",
+			"presentation": {
+				"reveal": "never",
+				"group": "watchers"
+			}
 		}
 	]
 }

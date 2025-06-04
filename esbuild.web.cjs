@@ -16,10 +16,6 @@ async function main() {
 		external: ["vscode"],
 		logLevel: "silent",
 
-		alias: {
-			"node:fs": "@isomorphic-git/lightning-fs",
-		},
-
 		plugins: [
 			esbuildProblemMatcherPlugin /* add to the end of plugins array */,
 		],

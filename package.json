@@ -66,14 +66,13 @@
 		"check-types": "tsc --noEmit",
 		"lint": "eslint src",
 		"test": "vscode-test",
-		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
+		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ../../tests/git-branches"
 	},
 	"dependencies": {
-		"@isomorphic-git/lightning-fs": "^4.6.2",
+		"buffer": "^6.0.3",
 		"isomorphic-git": "^1.30.2"
 	},
 	"devDependencies": {
-		"@playwright/browser-chromium": "^1.52.0",
 		"@types/node": "~22.15.29",
 		"@types/vscode": "^1.80.0",
 		"@typescript-eslint/eslint-plugin": "^8.33.1",
