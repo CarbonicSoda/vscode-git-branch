@@ -36,7 +36,12 @@
 	],
 	"icon": "media/icon.png",
 	"main": "./dist/extension.js",
-	"browser": "./dist/web/extension.js",
+	"capabilities": {
+		"virtualWorkspaces": {
+			"supported": false,
+			"description": "VSCode API is incomplete for virtual workspaces."
+		}
+	},
 	"contributes": {
 		"views": {
 			"scm": [
@@ -54,22 +59,19 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
-		"compile": "pnpm run check-types && pnpm run lint && node esbuild.cjs && node esbuild.web.cjs",
+		"compile": "pnpm run check-types && pnpm run lint && node esbuild.cjs",
 		"watch": "npm-run-all -p watch:*",
 		"watch:esbuild": "node esbuild.cjs --watch",
-		"watch:esbuild-web": "node esbuild.web.cjs --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"package": "pnpm run check-types && pnpm run lint && node esbuild.cjs --production && node esbuild.web.cjs --production",
+		"package": "pnpm run check-types && pnpm run lint && node esbuild.cjs --production",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
 		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
 		"check-types": "tsc --noEmit",
 		"lint": "eslint src",
-		"test": "vscode-test",
-		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ../../tests/git-branches"
+		"test": "vscode-test"
 	},
 	"dependencies": {
-		"buffer": "^6.0.3",
 		"isomorphic-git": "^1.30.2"
 	},
 	"devDependencies": {
@@ -79,7 +81,6 @@
 		"@typescript-eslint/parser": "^8.33.1",
 		"@vscode/test-cli": "^0.0.11",
 		"@vscode/test-electron": "^2.5.2",
-		"@vscode/test-web": "^0.0.69",
 		"esbuild": "^0.25.5",
 		"eslint": "^9.28.0",
 		"npm-run-all": "^4.1.5",
@@ -87,7 +88,6 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
-			"@playwright/browser-chromium",
 			"esbuild"
 		]
 	},

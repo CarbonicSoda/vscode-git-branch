@@ -1,5 +1,3 @@
-import { Event } from "vscode";
-
 export namespace Aux.object {
 	/**
 	 * Similar to Object.groupBy()
@@ -60,29 +58,5 @@ export namespace Aux.string {
 
 	export const formal = (word: string) => {
 		return word[0].toUpperCase() + word.slice(1);
-	};
-}
-
-export namespace Aux.event {
-	export async function wait(listen: Event<any>): Promise<void> {
-		return await new Promise((res) => {
-			const disposable = listen(() => {
-				res();
-				disposable.dispose();
-			});
-		});
-	}
-}
-
-export namespace Aux.algorithm {
-	export const fnv1a = (key: string) => {
-		let hash = 2166136261;
-
-		for (let i = 0; i < key.length; i++) {
-			hash ^= key.charCodeAt(i);
-			hash = Math.imul(hash, 16777619);
-		}
-
-		return hash;
 	};
 }
