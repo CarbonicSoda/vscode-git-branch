@@ -1,6 +1,9 @@
+import { TreeView } from "./tree";
 import { Janitor } from "./utils/janitor";
 
-export async function activate(): Promise<void> {}
+export function activate(): void {
+	TreeView.init();
+}
 
 export function deactivate() {
 	Janitor.cleanUp();
