@@ -48,18 +48,15 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 	items: TreeItem.PrimaryType[] = [];
 
-	cwd: string | undefined;
-
-	constructor() {
-		this.cwd = workspace.workspaceFolders?.[0].uri.fsPath;
-	}
+	cwd: string | undefined = workspace.workspaceFolders?.[0].uri.fsPath;
 
 	flush(): void {
 		this.dataChangeEmitter.fire();
 	}
 
 	async refresh(
-		cwd: typeof this.cwd = this.cwd,
+		cwd: typeof this.cwd = this.cwd ??
+			workspace.workspaceFolders?.[0].uri.fsPath,
 		expand: {
 			primary: boolean;
 			secondary: boolean;
