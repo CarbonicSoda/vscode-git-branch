@@ -1,27 +1,17 @@
 export namespace Aux.object {
 	/**
-	 * Similar to Object.groupBy()
-	 *
-	 * @param grouper callback for group keys
-	 * @returns ``grouper(obj)` as keys and corresponding objects as values
+	 * Similar to Object.groupBy() polyfill (see CarbonicSoda/better-memo)
+	 * but with single unqiue object for keys
 	 */
-	export function group<O extends { [key: string]: any }, V>(
+	export function rekey<O extends { [key: string]: any }, V>(
 		objs: O[],
-		grouper: (obj: O, i: number) => V,
-	): Map<V, O[]> {
-		const groups: Map<V, O[]> = new Map();
+		rekeyer: (obj: O, i: number) => V,
+	): Map<V, O> {
+		const rekeyed = new Map<V, O>();
 
-		objs.forEach((obj, i) => {
-			const group =
-				typeof grouper === "function"
-					? grouper(obj, i)
-					: obj[grouper as keyof O];
+		objs.forEach((obj, i) => rekeyed.set(rekeyer(obj, i), obj));
 
-			if (!groups.has(group)) groups.set(group, []);
-			groups.get(group)!.push(obj);
-		});
-
-		return groups;
+		return rekeyed;
 	}
 }
 
@@ -35,18 +25,6 @@ export namespace Aux.array {
 	}
 }
 
-export namespace Aux.async {
-	/**
-	 * Sugar for Promise.all(`iterable`.map(`async (ele) => {...}`))
-	 */
-	export async function map<T, C>(
-		iterable: Iterable<T>,
-		callback: (value: T, index: number, array: T[]) => Promise<C>,
-	): Promise<Awaited<C>[]> {
-		return await Promise.all([...iterable].map(callback));
-	}
-}
-
 export namespace Aux.string {
 	/**
 	 * @param countable number or object with `.length` property
@@ -56,9 +34,5 @@ export namespace Aux.string {
 		return (typeof countable === "number" ? countable : countable.length) === 1
 			? ""
 			: "s";
-	};
-
-	export const formal = (word: string) => {
-		return word[0].toUpperCase() + word.slice(1);
 	};
 }
