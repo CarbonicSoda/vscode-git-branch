@@ -1,11 +1,11 @@
-import { window } from "vscode";
+import { commands, window } from "vscode";
 
 import { Janitor } from "../utils/janitor";
 
 import { TreeProvider } from "./tree-provider";
 
 export namespace TreeView {
-	const expand = { primary: true, secondary: true };
+	const expand = { primary: true, secondary: false };
 
 	export async function init(): Promise<void> {
 		const provider = new TreeProvider();
@@ -15,7 +15,14 @@ export namespace TreeView {
 			canSelectMany: false,
 		});
 
-		Janitor.add(explorer);
+		Janitor.add(
+			explorer,
+
+			commands.registerCommand(
+				"git-branch-master.copyFullHash",
+				(copy: () => Promise<void>) => copy(),
+			),
+		);
 
 		const updateView = () => provider.refresh(undefined, expand);
 

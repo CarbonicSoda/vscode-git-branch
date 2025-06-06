@@ -1,4 +1,4 @@
-import { TreeItemCollapsibleState, TreeItem as VSTreeItem } from "vscode";
+import { env, TreeItemCollapsibleState, TreeItem as VSTreeItem } from "vscode";
 
 export namespace TreeItem {
 	export type PrimaryType = BranchItem<"primary">;
@@ -31,7 +31,7 @@ export namespace TreeItem {
 	> extends ExplorerItem<
 		T extends "primary" ? undefined : BranchItem<"primary">
 	> {
-		contextValue = "Branch";
+		contextValue = "branch";
 
 		children: (T extends "primary" ? BranchItem<"secondary"> : LeafType)[] = [];
 
@@ -45,7 +45,12 @@ export namespace TreeItem {
 	}
 
 	export class CommitItem extends ExplorerItem<BranchItem<"secondary">> {
-		contextValue = "Commit";
+		command = {
+			title: "Copy Full Hash",
+			command: "git-branch-master.copyFullHash",
+			arguments: [async () => await env.clipboard.writeText(this.hash)],
+		};
+		tooltip = "Copy Full Hash";
 
 		constructor(public hash: string, parent: BranchItem<"secondary">) {
 			super(hash.slice(0, 7), null, parent);

@@ -156,8 +156,8 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			unmerged: Colors.interpolate("#F00"),
 		};
 
-		const targets = branches.map((branch) => {
-			const target = new TreeItem.BranchItem<"primary">(
+		const targetItems = branches.map((branch) => {
+			const targetItem = new TreeItem.BranchItem<"primary">(
 				branch,
 				expand.primary,
 				undefined,
@@ -168,11 +168,11 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			const icon = isHead ? "target" : "git-branch";
 			const color = isHead ? colors.head : Colors.hash(branch);
 
-			target.iconPath = new ThemeIcon(icon, color);
+			targetItem.iconPath = new ThemeIcon(icon, color);
 
 			const last = lastCommits.get(branch)!;
 
-			target.tooltip = new MarkdownString(
+			targetItem.tooltip = new MarkdownString(
 				`#### $(${icon}) ${branch}\n\n---\n$(history) **Last Commit**  \n${
 					last.oid
 				}\n\n${
@@ -185,46 +185,60 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				true,
 			);
 
-			return target;
+			return targetItem;
 		});
 
-		const items = Aux.object.group(targets, (item) => item.branch);
+		const branchItems = Aux.object.rekey(targetItems, (item) => item.branch);
 
-		for (const target of targets) {
+		for (const targetItem of targetItems) {
 			for (const branch of branches) {
-				if (target.branch === branch) continue;
+				if (targetItem.branch === branch) continue;
 
-				const base = new TreeItem.BranchItem<"secondary">(
-					branch,
-					expand.secondary,
-					target,
-				);
-				target.children.push(base);
+				const mergeBase = mergeBases.get(targetItem.branch, branch);
+				if (!mergeBase) continue;
 
-				base.tooltip = items.get(branch)![0].tooltip;
-
-				const mergeBase = mergeBases.get(target.branch, branch);
-
-				const toBase = mergeBase
-					? branchDiffs.get(mergeBase, branch)
-					: "$(error)";
-				const toTarget = mergeBase
-					? branchDiffs.get(mergeBase, target.branch)
-					: "$(error)";
+				const toBase = branchDiffs.get(mergeBase, branch)!;
+				const toTarget = branchDiffs.get(mergeBase, targetItem.branch)!;
 
 				const isMerged = toBase === 0;
 				const isLatest = toTarget === 0;
 
-				base.description = ` ${isMerged ? "" : `↑${toBase}  `}${
+				const baseItem = new TreeItem.BranchItem<"secondary">(
+					branch,
+					isMerged ? null : expand.secondary,
+					targetItem,
+				);
+				targetItem.children.push(baseItem);
+
+				baseItem.description = `${isMerged ? "" : `↑${toBase} `}${
 					isLatest ? "" : `↓${toTarget}`
 				}`;
 
-				base.iconPath = isMerged
+				baseItem.tooltip = branchItems.get(branch)!.tooltip;
+
+				baseItem.iconPath = isMerged
 					? new ThemeIcon("check", colors.merged)
 					: new ThemeIcon("x", colors.unmerged);
+
+				if (isMerged) continue;
+
+				const baseLast = lastCommits.get(branch)!;
+
+				const lastCommitItem = new TreeItem.CommitItem(baseLast.oid, baseItem);
+				baseItem.children.push(lastCommitItem);
+
+				const spreadItem = new TreeItem.Separator("", baseItem);
+				baseItem.children.push(spreadItem);
+
+				spreadItem.description = `${toBase} Commit${Aux.string.plural(
+					toBase,
+				)} Ahead Base`;
+
+				const mergeBaseItem = new TreeItem.CommitItem(mergeBase, baseItem);
+				baseItem.children.push(mergeBaseItem);
 			}
 		}
 
-		return targets;
+		return targetItems;
 	}
 }

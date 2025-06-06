@@ -55,7 +55,14 @@
 			]
 		},
 		"configuration": [],
-		"commands": []
+		"commands": [
+			{
+				"title": "Copy Full Hash",
+				"command": "git-branch-master.copyFullHash",
+				"enablement": "focusedView == 'git-branch-master.gitBranches'",
+				"category": "Git Branches"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
