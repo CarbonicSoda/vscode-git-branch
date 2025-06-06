@@ -26,10 +26,12 @@ export namespace Aux.object {
 }
 
 export namespace Aux.array {
-	export function pin<T>(array: T[], pin: (item: T) => boolean): T[] {
-		return array.sort((a, b) => {
-			return +pin(b) - +pin(a);
-		});
+	export function pin<T>(array: T[], ...pins: T[][]): T[] {
+		for (const p of pins.reverse()) {
+			array.sort((a, b) => +p.includes(b) - +p.includes(a));
+		}
+
+		return array;
 	}
 }
 

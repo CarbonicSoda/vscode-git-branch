@@ -8,6 +8,7 @@ import {
 } from "vscode";
 
 import {
+	currentBranch,
 	findMergeBase,
 	findRoot,
 	listBranches,
@@ -19,6 +20,7 @@ import { Colors } from "../utils/colors";
 import { fs } from "../utils/fs";
 import { TreeItem } from "./tree-item";
 import { SyMap } from "../utils/symap";
+import { Format } from "../utils/format";
 
 export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	private dataChangeEmitter: EventEmitter<void> = new EventEmitter<void>();
@@ -43,10 +45,10 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 	items: TreeItem.PrimaryType[] = [];
 
-	cwd: string;
+	cwd: string | undefined;
 
 	constructor() {
-		this.cwd = workspace.workspaceFolders![0].uri.fsPath;
+		this.cwd = workspace.workspaceFolders?.[0].uri.fsPath;
 	}
 
 	flush(): void {
@@ -54,7 +56,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	}
 
 	async refresh(
-		cwd: string = this.cwd,
+		cwd: typeof this.cwd = this.cwd,
 		expand: {
 			primary: boolean;
 			secondary: boolean;
@@ -68,53 +70,93 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 	//MO TODO allow passing `changed` branches so as to prevent unnecessary recomputations
 	private async getItems(
-		cwd: string,
+		cwd: typeof this.cwd,
 		expand: {
 			primary: boolean;
 			secondary: boolean;
 		},
 	): Promise<typeof this.items> {
-		// const colors = {
-		// 	head: Colors.interpolate("00F"),
-		// 	merged: Colors.interpolate("#0F0"),
-		// 	unmerged: Colors.interpolate("#F00"),
-		// };
+		if (!cwd) return [];
+
+		const colors = {
+			head: Colors.interpolate("00F"),
+			merged: Colors.interpolate("#0F0"),
+			unmerged: Colors.interpolate("#F00"),
+		};
 
 		const dir = await findRoot({ fs, filepath: cwd });
 
 		const branches = await listBranches({ fs, dir });
 		if (branches.length < 2) return [];
 
+		Aux.array.pin(branches, ["main", "master"], ["dev", "develop"]);
+
 		const cache = {};
 
-		const lastCommit: Map<string, ReadCommitResult> = new Map();
-		for (const branch of branches) {
-			const last = await log({ fs, dir, depth: 1, ref: branch });
+		const headBranch = await currentBranch({ fs, dir });
 
-			lastCommit.set(branch, last[0]);
+		const lastCommits: Map<string, ReadCommitResult> = new Map();
+		for (const branch of branches) {
+			const commit = await log({ fs, dir, ref: branch, depth: 1, cache });
+
+			lastCommits.set(branch, commit[0]);
 		}
 
-		const mergeBase: SyMap<string | undefined> = new SyMap();
+		const mergeBases: SyMap<string | undefined> = new SyMap();
 		for (let i = 0; i < branches.length; i++) {
 			for (let j = i + 1; j < branches.length; j++) {
 				const branch1 = branches[i];
 				const branch2 = branches[j];
 
-				const oid1 = lastCommit.get(branch1)!.oid;
-				const oid2 = lastCommit.get(branch2)!.oid;
+				const oid1 = lastCommits.get(branch1)!.oid;
+				const oid2 = lastCommits.get(branch2)!.oid;
 
-				const base = (await findMergeBase({
+				const bases: string[] = await findMergeBase({
 					fs,
 					dir,
 					oids: [oid1, oid2],
 					cache,
-				})) as [string | undefined];
+				});
 
-				mergeBase.set(branch1, branch2, base[0]);
+				// criss-cross merges are ignored
+				mergeBases.set(branch1, branch2, bases[0]);
 			}
 		}
 
-		//MO TODO u know
-		return [];
+		const targets = [];
+		for (const branch of branches) {
+			const target = new TreeItem.BranchItem<"primary">(
+				branch,
+
+				expand.primary,
+				undefined,
+			);
+
+			const isHead = branch === headBranch;
+
+			const icon = isHead ? "target" : "git-branch";
+			const color = isHead ? colors.head : Colors.hash(branch);
+
+			target.iconPath = new ThemeIcon(icon, color);
+
+			const lastCommit = lastCommits.get(branch)!;
+
+			target.tooltip = new MarkdownString(
+				`#### $(${icon}) ${branch}\n\n---\n$(history) **Last Commit**  \n${
+					lastCommit.oid
+				}\n\n${
+					lastCommit.commit.message
+				}\n\n$(account) **Author**  \n${Format.contributor(
+					lastCommit.commit.author,
+				)}  \n$(account) **Committer**  \n${Format.contributor(
+					lastCommit.commit.committer,
+				)}`,
+				true,
+			);
+
+			targets.push(target);
+		}
+
+		return targets;
 	}
 }
