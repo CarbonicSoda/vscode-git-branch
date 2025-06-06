@@ -1,5 +1,5 @@
 export class SyMap<V> {
-	private map: Map<string, V> = new Map();
+	private map = new Map<string, V>();
 
 	set(key1: string, key2: string, value: V): void {
 		this.map.set(key(key1, key2), value);

@@ -14,12 +14,7 @@ export namespace TreeItem {
 	class ExplorerItem<
 		P extends undefined | ExplorerItem<undefined | ExplorerItem<undefined>>,
 	> extends VSTreeItem {
-		constructor(
-			public text: string,
-
-			expand: boolean | null,
-			public parent: P,
-		) {
+		constructor(public text: string, expand: boolean | null, public parent: P) {
 			super(
 				text,
 				expand === null
@@ -41,12 +36,11 @@ export namespace TreeItem {
 		children: (T extends "primary" ? BranchItem<"secondary"> : LeafType)[] = [];
 
 		constructor(
-			name: string,
-
+			public branch: string,
 			expand: boolean | null,
 			parent: T extends "primary" ? undefined : BranchItem<"primary">,
 		) {
-			super(name, expand, parent);
+			super(branch, expand, parent);
 		}
 	}
 

@@ -1,8 +1,8 @@
-import { extensions, window } from "vscode";
+import { window } from "vscode";
+
+import { Janitor } from "../utils/janitor";
 
 import { TreeProvider } from "./tree-provider";
-import { Aux } from "../utils/auxiliary";
-import { Janitor } from "../utils/janitor";
 
 export namespace TreeView {
 	const expand = { primary: true, secondary: true };
@@ -17,9 +17,7 @@ export namespace TreeView {
 
 		Janitor.add(explorer);
 
-		function updateView(): void {
-			provider.refresh(undefined, expand);
-		}
+		const updateView = () => provider.refresh(undefined, expand);
 
 		updateView();
 	}

@@ -15,12 +15,14 @@ import {
 	log,
 	ReadCommitResult,
 } from "isomorphic-git";
+
 import { Aux } from "../utils/auxiliary";
 import { Colors } from "../utils/colors";
-import { fs } from "../utils/fs";
-import { TreeItem } from "./tree-item";
-import { SyMap } from "../utils/symap";
 import { Format } from "../utils/format";
+import { fs } from "../utils/fs";
+import { SyMap } from "../utils/symap";
+
+import { TreeItem } from "./tree-item";
 
 export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	private dataChangeEmitter: EventEmitter<void> = new EventEmitter<void>();
@@ -78,12 +80,6 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	): Promise<typeof this.items> {
 		if (!cwd) return [];
 
-		const colors = {
-			head: Colors.interpolate("00F"),
-			merged: Colors.interpolate("#0F0"),
-			unmerged: Colors.interpolate("#F00"),
-		};
-
 		const dir = await findRoot({ fs, filepath: cwd });
 
 		const branches = await listBranches({ fs, dir });
@@ -95,26 +91,26 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 		const headBranch = await currentBranch({ fs, dir });
 
-		const lastCommits: Map<string, ReadCommitResult> = new Map();
+		const lastCommits = new Map<string, ReadCommitResult>();
 		for (const branch of branches) {
-			const commit = await log({ fs, dir, ref: branch, depth: 1, cache });
+			const last = await log({ fs, dir, ref: branch, depth: 1, cache });
 
-			lastCommits.set(branch, commit[0]);
+			lastCommits.set(branch, last[0]);
 		}
 
-		const mergeBases: SyMap<string | undefined> = new SyMap();
+		const mergeBases = new SyMap<string | undefined>();
 		for (let i = 0; i < branches.length; i++) {
 			for (let j = i + 1; j < branches.length; j++) {
 				const branch1 = branches[i];
 				const branch2 = branches[j];
 
-				const oid1 = lastCommits.get(branch1)!.oid;
-				const oid2 = lastCommits.get(branch2)!.oid;
+				const last1 = lastCommits.get(branch1)!;
+				const last2 = lastCommits.get(branch2)!;
 
 				const bases: string[] = await findMergeBase({
 					fs,
 					dir,
-					oids: [oid1, oid2],
+					oids: [last1.oid, last2.oid],
 					cache,
 				});
 
@@ -123,11 +119,46 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			}
 		}
 
-		const targets = [];
-		for (const branch of branches) {
+		const diff = async (from: string, to: string) => {
+			let dist = 0;
+
+			while (from !== to) {
+				const last = await log({ fs, dir, ref: to, depth: 2, cache });
+
+				to = last[1].oid;
+				dist++;
+			}
+			return dist;
+		};
+		const branchDiffs = new SyMap<number>();
+		for (let i = 0; i < branches.length; i++) {
+			for (let j = i + 1; j < branches.length; j++) {
+				const branch1 = branches[i];
+				const branch2 = branches[j];
+
+				const mergeBase = mergeBases.get(branch1, branch2);
+				if (!mergeBase) continue;
+
+				const last1 = lastCommits.get(branch1)!;
+				const last2 = lastCommits.get(branch2)!;
+
+				const toBranch1 = await diff(mergeBase, last1.oid);
+				const toBranch2 = await diff(mergeBase, last2.oid);
+
+				branchDiffs.set(mergeBase, branch1, toBranch1);
+				branchDiffs.set(mergeBase, branch2, toBranch2);
+			}
+		}
+
+		const colors = {
+			head: Colors.interpolate("00F"),
+			merged: Colors.interpolate("#0F0"),
+			unmerged: Colors.interpolate("#F00"),
+		};
+
+		const targets = branches.map((branch) => {
 			const target = new TreeItem.BranchItem<"primary">(
 				branch,
-
 				expand.primary,
 				undefined,
 			);
@@ -139,22 +170,59 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 			target.iconPath = new ThemeIcon(icon, color);
 
-			const lastCommit = lastCommits.get(branch)!;
+			const last = lastCommits.get(branch)!;
 
 			target.tooltip = new MarkdownString(
 				`#### $(${icon}) ${branch}\n\n---\n$(history) **Last Commit**  \n${
-					lastCommit.oid
+					last.oid
 				}\n\n${
-					lastCommit.commit.message
+					last.commit.message
 				}\n\n$(account) **Author**  \n${Format.contributor(
-					lastCommit.commit.author,
+					last.commit.author,
 				)}  \n$(account) **Committer**  \n${Format.contributor(
-					lastCommit.commit.committer,
+					last.commit.committer,
 				)}`,
 				true,
 			);
 
-			targets.push(target);
+			return target;
+		});
+
+		const items = Aux.object.group(targets, (item) => item.branch);
+
+		for (const target of targets) {
+			for (const branch of branches) {
+				if (target.branch === branch) continue;
+
+				const base = new TreeItem.BranchItem<"secondary">(
+					branch,
+					expand.secondary,
+					target,
+				);
+				target.children.push(base);
+
+				base.tooltip = items.get(branch)![0].tooltip;
+
+				const mergeBase = mergeBases.get(target.branch, branch);
+
+				const toBase = mergeBase
+					? branchDiffs.get(mergeBase, branch)
+					: "$(error)";
+				const toTarget = mergeBase
+					? branchDiffs.get(mergeBase, target.branch)
+					: "$(error)";
+
+				const isMerged = toBase === 0;
+				const isLatest = toTarget === 0;
+
+				base.description = ` ${isMerged ? "" : `↑${toBase}  `}${
+					isLatest ? "" : `↓${toTarget}`
+				}`;
+
+				base.iconPath = isMerged
+					? new ThemeIcon("check", colors.merged)
+					: new ThemeIcon("x", colors.unmerged);
+			}
 		}
 
 		return targets;
