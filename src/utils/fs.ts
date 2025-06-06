@@ -1,1 +1,3 @@
-export { default as fs } from "node:fs";
+import promises from "node:fs/promises";
+
+export const fs = { promises };
