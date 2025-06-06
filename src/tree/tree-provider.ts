@@ -184,6 +184,8 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 		const branchItems = Aux.object.rekey(targetItems, (item) => item.branch);
 
 		for (const targetItem of targetItems) {
+			let unmerged = 0;
+
 			for (const branch of branches) {
 				if (targetItem.branch === branch) continue;
 
@@ -214,6 +216,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 					: new ThemeIcon("x", colors.unmerged);
 
 				if (isMerged) continue;
+				unmerged++;
 
 				const lastCommit = lastCommits.get(branch)!;
 				const lastCommitItem = new TreeItem.CommitItem(
@@ -243,6 +246,8 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				);
 				baseItem.children.push(mergeBaseItem);
 			}
+
+			targetItem.description = unmerged === 0 ? "" : `\u00d7${unmerged}`;
 		}
 
 		return targetItems;
