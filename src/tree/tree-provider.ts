@@ -13,12 +13,13 @@ import {
 	findRoot,
 	listBranches,
 	log,
+	readCommit,
 	ReadCommitResult,
 } from "isomorphic-git";
 
 import { Aux } from "../utils/auxiliary";
 import { Colors } from "../utils/colors";
-import { Format } from "../utils/format";
+import { Md } from "../utils/md";
 import { fs } from "../utils/fs";
 import { SyMap } from "../utils/symap";
 
@@ -173,15 +174,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			const last = lastCommits.get(branch)!;
 
 			targetItem.tooltip = new MarkdownString(
-				`#### $(${icon}) ${branch}\n\n---\n$(history) **Last Commit**  \n${
-					last.oid
-				}\n\n${
-					last.commit.message
-				}\n\n$(account) **Author**  \n${Format.contributor(
-					last.commit.author,
-				)}  \n$(account) **Committer**  \n${Format.contributor(
-					last.commit.committer,
-				)}`,
+				`#### $(${icon}) ${branch}\n\n---\n${Md.commit("Last Commit", last)}`,
 				true,
 			);
 
@@ -222,9 +215,12 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 
 				if (isMerged) continue;
 
-				const baseLast = lastCommits.get(branch)!;
-
-				const lastCommitItem = new TreeItem.CommitItem(baseLast.oid, baseItem);
+				const lastCommit = lastCommits.get(branch)!;
+				const lastCommitItem = new TreeItem.CommitItem(
+					"Last Commit",
+					lastCommit,
+					baseItem,
+				);
 				baseItem.children.push(lastCommitItem);
 
 				const spreadItem = new TreeItem.Separator("", baseItem);
@@ -234,7 +230,17 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 					toBase,
 				)} Ahead Base`;
 
-				const mergeBaseItem = new TreeItem.CommitItem(mergeBase, baseItem);
+				const mergeBaseCommit = await readCommit({
+					fs,
+					dir,
+					oid: mergeBase,
+					cache,
+				});
+				const mergeBaseItem = new TreeItem.CommitItem(
+					"Merge Base",
+					mergeBaseCommit,
+					baseItem,
+				);
 				baseItem.children.push(mergeBaseItem);
 			}
 		}

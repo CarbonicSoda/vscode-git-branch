@@ -1,4 +1,13 @@
-import { env, TreeItemCollapsibleState, TreeItem as VSTreeItem } from "vscode";
+import {
+	env,
+	MarkdownString,
+	TreeItemCollapsibleState,
+	TreeItem as VSTreeItem,
+} from "vscode";
+
+import { ReadCommitResult } from "isomorphic-git";
+
+import { Md } from "../utils/md";
 
 export namespace TreeItem {
 	export type PrimaryType = BranchItem<"primary">;
@@ -48,12 +57,20 @@ export namespace TreeItem {
 		command = {
 			title: "Copy Full Hash",
 			command: "git-branch-master.copyFullHash",
-			arguments: [async () => await env.clipboard.writeText(this.hash)],
+			arguments: [async () => await env.clipboard.writeText(this.commit.oid)],
 		};
-		tooltip = "Copy Full Hash";
 
-		constructor(public hash: string, parent: BranchItem<"secondary">) {
-			super(hash.slice(0, 7), null, parent);
+		constructor(
+			name: string,
+			public commit: ReadCommitResult,
+			parent: BranchItem<"secondary">,
+		) {
+			super(commit.oid.slice(0, 7), null, parent);
+
+			this.tooltip = new MarkdownString(
+				`${Md.commit(name, commit)}\n\n---\nClick to Copy Full Hash`,
+				true,
+			);
 		}
 	}
 
