@@ -19,8 +19,8 @@ import {
 
 import { Aux } from "../utils/auxiliary";
 import { Colors } from "../utils/colors";
-import { Md } from "../utils/md";
 import { fs } from "../utils/fs";
+import { Md } from "../utils/md";
 import { SyMap } from "../utils/symap";
 
 import { TreeItem } from "./tree-item";

@@ -23,9 +23,13 @@ export namespace TreeItem {
 	class ExplorerItem<
 		P extends undefined | ExplorerItem<undefined | ExplorerItem<undefined>>,
 	> extends VSTreeItem {
-		constructor(public text: string, expand: boolean | null, public parent: P) {
+		constructor(
+			public label: string,
+			expand: boolean | null,
+			public parent: P,
+		) {
 			super(
-				text,
+				label,
 				expand === null
 					? TreeItemCollapsibleState.None
 					: expand
@@ -75,8 +79,8 @@ export namespace TreeItem {
 	}
 
 	export class Separator extends ExplorerItem<BranchItem<"secondary">> {
-		constructor(public text: string, parent: BranchItem<"secondary">) {
-			super(text, null, parent);
+		constructor(public label: string, parent: BranchItem<"secondary">) {
+			super(label, null, parent);
 		}
 	}
 }

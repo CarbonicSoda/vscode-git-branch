@@ -54,15 +54,30 @@
 				}
 			]
 		},
-		"configuration": [],
 		"commands": [
 			{
-				"title": "Copy Full Hash",
+				"command": "git-branch-master.toggleFold",
+				"title": "Toggle Fold",
+				"enablement": "view.git-branch-master.gitBranches.visible",
+				"icon": "$(fold)",
+				"category": "Better Memo"
+			},
+			{
 				"command": "git-branch-master.copyFullHash",
-				"enablement": "focusedView == 'git-branch-master.gitBranches'",
+				"title": "Copy Full Hash",
+				"enablement": "focusedView == git-branch-master.gitBranches",
 				"category": "Git Branches"
 			}
-		]
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "git-branch-master.toggleFold",
+					"when": "view == git-branch-master.gitBranches",
+					"group": "navigation@1"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
