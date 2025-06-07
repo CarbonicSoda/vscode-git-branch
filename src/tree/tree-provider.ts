@@ -105,12 +105,14 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				const last1 = lastCommits.get(branch1)!;
 				const last2 = lastCommits.get(branch2)!;
 
+				//MO FIX isomorphic-git is broken, heck. writing my own
 				const bases: string[] = await findMergeBase({
 					fs,
 					dir,
 					oids: [last1.oid, last2.oid],
 					cache,
 				});
+				console.log(last1, last2, bases);
 
 				// criss-cross merges are ignored
 				mergeBases.set(branch1, branch2, bases[0]);
