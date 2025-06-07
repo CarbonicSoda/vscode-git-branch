@@ -11,6 +11,8 @@ The 2.x versions are buggy currently, due to bugs of isomorphic-git. It also
 lacks certain features in 1.x (although it adds even more). This release is only
 for first glance on visuals. For stability consider using 1.x versions.
 
+> Demo images are not updated yet since it is still not yet stable.
+
 ## Overview
 
 Git branches enable parallel development but can create messiness.  

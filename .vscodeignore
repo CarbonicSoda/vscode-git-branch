@@ -6,8 +6,9 @@
 esbuild.cjs
 esbuild.web.cjs
 eslint.config.mjs
-media/usage-guide
+media/demo.png
 pnpm-lock.yaml
+pnpm-workspace.yaml
 src
 tools
 tsconfig.json
