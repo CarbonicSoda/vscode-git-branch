@@ -56,9 +56,16 @@
 		},
 		"commands": [
 			{
+				"command": "git-branch-master.refresh",
+				"title": "Refresh Explorer",
+				"enablement": "view == git-branch-master.gitBranches",
+				"icon": "$(refresh)",
+				"category": "Better Memo"
+			},
+			{
 				"command": "git-branch-master.toggleFold",
 				"title": "Toggle Fold",
-				"enablement": "view.git-branch-master.gitBranches.visible",
+				"enablement": "view == git-branch-master.gitBranches",
 				"icon": "$(fold)",
 				"category": "Better Memo"
 			},
@@ -72,9 +79,14 @@
 		"menus": {
 			"view/title": [
 				{
-					"command": "git-branch-master.toggleFold",
+					"command": "git-branch-master.refresh",
 					"when": "view == git-branch-master.gitBranches",
 					"group": "navigation@1"
+				},
+				{
+					"command": "git-branch-master.toggleFold",
+					"when": "view == git-branch-master.gitBranches",
+					"group": "navigation@2"
 				}
 			]
 		}

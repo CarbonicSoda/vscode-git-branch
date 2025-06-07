@@ -14,11 +14,14 @@ export namespace TreeView {
 			treeDataProvider: provider,
 			canSelectMany: false,
 		});
+		const refresh = () => provider.refresh(undefined, expand);
 
 		Janitor.add(
 			explorer,
 
-			//MO TODO remember to add context enablement to toggleFold
+			//MO TODO remember to add context enablement to commands
+			commands.registerCommand("git-branch-master.refresh", refresh),
+
 			commands.registerCommand("git-branch-master.toggleFold", () => {
 				[expand.primary, expand.secondary] = [
 					!expand.secondary,
@@ -51,8 +54,6 @@ export namespace TreeView {
 			),
 		);
 
-		const updateView = () => provider.refresh(undefined, expand);
-
-		updateView();
+		refresh();
 	}
 }
