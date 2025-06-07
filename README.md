@@ -1,7 +1,7 @@
 <h3 align="center">
-	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="Git Branches Icon" />
+	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="Git Branch Icon" />
 	<p></p>
-	Git Branch Master for VSCode
+	Git Branch for VSCode
 </h3>
 <h4 align="center">Level up Inspector for Git Branches</h4>
 
