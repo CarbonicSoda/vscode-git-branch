@@ -112,7 +112,6 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 					oids: [last1.oid, last2.oid],
 					cache,
 				});
-				console.log(last1, last2, bases);
 
 				// criss-cross merges are ignored
 				mergeBases.set(branch1, branch2, bases[0]);
