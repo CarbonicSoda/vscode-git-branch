@@ -1,5 +1,5 @@
 <h3 align="center">
-	<img src="https://raw.githubusercontent.com/CarbonicSoda/vscode-git-branch-master/master/media/icon.png" width="100" alt="Git Branch Icon" />
+	<img src="https://raw.githubusercontent.com/wavim/vscode-git-branch-master/master/media/icon.png" width="100" alt="Git Branch Icon" />
 	<p></p>
 	Git Branch for VSCode
 </h3>
@@ -29,7 +29,7 @@ _Features are not limited to..._
 
 ## Demo
 
-![DEMO](https://github.com/CarbonicSoda/vscode-git-branch-master/blob/master/media/demo.png?raw=true)
+![DEMO](https://github.com/wavim/vscode-git-branch-master/blob/master/media/demo.png?raw=true)
 
 > You can conveniently copy branch name / full commit hash through item actions.
 
