@@ -1,7 +1,7 @@
 import {
 	Cache,
 	Commit,
-	findParents,
+	diffCommits,
 	getBranches,
 	headBranch,
 	lastCommit,
@@ -102,21 +102,6 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			}
 		}
 
-		const diff = async (from: string, to: string) => {
-			let dist = 0;
-
-			while (from !== to) {
-				const [last] = await findParents(repo, to, cache);
-
-				if (!last) {
-					break;
-				}
-				to = last;
-
-				dist++;
-			}
-			return dist;
-		};
 		const branchDiffs = new SyMap<number>();
 		for (let i = 0; i < branches.length; i++) {
 			for (let j = i + 1; j < branches.length; j++) {
@@ -129,11 +114,11 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				const last1 = lastCommits.get(branch1)!;
 				const last2 = lastCommits.get(branch2)!;
 
-				const toBranch1 = await diff(last1.hash, base);
-				const toBranch2 = await diff(last2.hash, base);
+				const toBranch1 = await diffCommits(repo, last1.hash, base, cache);
+				const toBranch2 = await diffCommits(repo, last2.hash, base, cache);
 
-				branchDiffs.set(base, branch1, toBranch1);
-				branchDiffs.set(base, branch2, toBranch2);
+				branchDiffs.set(base, branch1, toBranch1.length);
+				branchDiffs.set(base, branch2, toBranch2.length);
 			}
 		}
 

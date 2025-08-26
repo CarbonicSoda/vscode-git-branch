@@ -18,8 +18,9 @@ tracking merge statuses, pinpointing merge bases, and monitoring incoming/outgoi
 
 ## Status
 
-The codebase is in a maintenance-only state. It is stable but uses legacy patterns. The underlying
-Git library [NeoGit](https://github.com/wavim/neogit), however, remains highly optimized.
+The codebase is in a maintenance-only state. It is stable but uses legacy patterns (many literally
+stupid code, I was very dumb in the early days). The underlying Git library
+[NeoGit](https://github.com/wavim/neogit), however, remains highly optimized.
 
 Development is concluded. Unimplemented features are considered out of scope and will not be added.
 This is primarily due to a shift in interests, and having an obsolete codebase. Critical bugs may be
