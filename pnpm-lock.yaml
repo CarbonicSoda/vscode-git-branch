@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       neogit:
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.5.3
+        version: 1.5.3
     devDependencies:
       '@eslint/js':
         specifier: ^9.34.0
@@ -1228,8 +1228,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  neogit@1.5.1:
-    resolution: {integrity: sha512-4I8hhX+KVdFk9mitkyISddxhmEGjc7XjHBT3PHiRNVDiJpaVfgNHX/oVLSwUvQSjqbZwxjpRZJvRpJnMa15oiw==}
+  neogit@1.5.3:
+    resolution: {integrity: sha512-zPn041eowMNEyp4TZ2852lTqnnEc4kBCzch3EQNsCtdaSl25JDlTyhvdS824LrqrKCfro8xCXvtrWesHbvyiCw==}
 
   nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -3023,7 +3023,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  neogit@1.5.1: {}
+  neogit@1.5.3: {}
 
   nice-try@1.0.5: {}
 
