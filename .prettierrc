@@ -1,13 +1,15 @@
 {
-	"endOfLine": "auto",
-	"htmlWhitespaceSensitivity": "css",
-	"objectWrap": "collapse",
-	"printWidth": 80,
-	"proseWrap": "always",
-	"quoteProps": "consistent",
+	"useTabs": true,
+	"tabWidth": 8,
+	"printWidth": 100,
+
 	"semi": true,
-	"singleAttributePerLine": true,
-	"tabWidth": 2,
+	"endOfLine": "auto",
 	"trailingComma": "all",
-	"useTabs": true
+
+	"objectWrap": "collapse",
+	"quoteProps": "consistent",
+
+	"proseWrap": "always",
+	"overrides": [{ "files": ["*.md"], "options": { "useTabs": false } }]
 }

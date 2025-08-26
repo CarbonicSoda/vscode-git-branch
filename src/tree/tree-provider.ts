@@ -1,4 +1,15 @@
 import {
+	Cache,
+	Commit,
+	findParents,
+	getBranches,
+	headBranch,
+	lastCommit,
+	mergeBases,
+	readCommit,
+	searchRepo,
+} from "neogit";
+import {
 	Event,
 	EventEmitter,
 	MarkdownString,
@@ -6,23 +17,10 @@ import {
 	TreeDataProvider,
 	workspace,
 } from "vscode";
-
-import {
-	currentBranch,
-	findMergeBase,
-	findRoot,
-	listBranches,
-	log,
-	readCommit,
-	ReadCommitResult,
-} from "isomorphic-git";
-
 import { Aux } from "../utils/auxiliary";
 import { Colors } from "../utils/colors";
-import { fs } from "../utils/fs";
 import { Md } from "../utils/md";
 import { SyMap } from "../utils/symap";
-
 import { TreeItem } from "./tree-item";
 
 export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
@@ -55,48 +53,37 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 	}
 
 	async refresh(
-		cwd: typeof this.cwd = this.cwd ??
-			workspace.workspaceFolders?.[0].uri.fsPath,
-		expand: {
-			primary: boolean;
-			secondary: boolean;
-		},
+		cwd: typeof this.cwd = this.cwd ?? workspace.workspaceFolders?.[0].uri.fsPath,
+		expand: { primary: boolean; secondary: boolean },
 	): Promise<void> {
 		this.items = await this.getItems(cwd, expand);
-
-		//MO TODO update context
 		this.flush();
 	}
 
-	//MO TODO allow passing `changed` branches so as to prevent unnecessary recomputations
 	private async getItems(
 		cwd: typeof this.cwd,
-		expand: {
-			primary: boolean;
-			secondary: boolean;
-		},
+		expand: { primary: boolean; secondary: boolean },
 	): Promise<typeof this.items> {
 		if (!cwd) return [];
 
-		const dir = await findRoot({ fs, filepath: cwd });
+		const repo = searchRepo(cwd);
 
-		const branches = await listBranches({ fs, dir });
+		const branches = await getBranches(repo);
 		if (branches.length < 2) return [];
 
 		Aux.array.pin(branches, ["main", "master"], ["dev", "develop"]);
 
-		const cache = {};
+		const cache = new Cache();
 
-		const headBranch = await currentBranch({ fs, dir });
+		const head = await headBranch(repo);
 
-		const lastCommits = new Map<string, ReadCommitResult>();
+		const lastCommits = new Map<string, Commit>();
 		for (const branch of branches) {
-			const last = await log({ fs, dir, ref: branch, depth: 1, cache });
-
-			lastCommits.set(branch, last[0]);
+			const hash = await lastCommit(repo, branch);
+			lastCommits.set(branch, await readCommit(repo, hash, cache));
 		}
 
-		const mergeBases = new SyMap<string | undefined>();
+		const mergeBase = new SyMap<string | undefined>();
 		for (let i = 0; i < branches.length; i++) {
 			for (let j = i + 1; j < branches.length; j++) {
 				const branch1 = branches[i];
@@ -105,16 +92,13 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				const last1 = lastCommits.get(branch1)!;
 				const last2 = lastCommits.get(branch2)!;
 
-				//MO FIX isomorphic-git is broken, heck. writing my own
-				const bases: string[] = await findMergeBase({
-					fs,
-					dir,
-					oids: [last1.oid, last2.oid],
+				const [base] = await mergeBases(
+					repo,
+					last1.hash,
+					last2.hash,
 					cache,
-				});
-
-				// criss-cross merges are ignored
-				mergeBases.set(branch1, branch2, bases[0]);
+				);
+				mergeBase.set(branch1, branch2, base);
 			}
 		}
 
@@ -122,9 +106,13 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			let dist = 0;
 
 			while (from !== to) {
-				const last = await log({ fs, dir, ref: to, depth: 2, cache });
+				const [last] = await findParents(repo, to, cache);
 
-				to = last[1].oid;
+				if (!last) {
+					break;
+				}
+				to = last;
+
 				dist++;
 			}
 			return dist;
@@ -135,17 +123,17 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				const branch1 = branches[i];
 				const branch2 = branches[j];
 
-				const mergeBase = mergeBases.get(branch1, branch2);
-				if (!mergeBase) continue;
+				const base = mergeBase.get(branch1, branch2);
+				if (!base) continue;
 
 				const last1 = lastCommits.get(branch1)!;
 				const last2 = lastCommits.get(branch2)!;
 
-				const toBranch1 = await diff(mergeBase, last1.oid);
-				const toBranch2 = await diff(mergeBase, last2.oid);
+				const toBranch1 = await diff(last1.hash, base);
+				const toBranch2 = await diff(last2.hash, base);
 
-				branchDiffs.set(mergeBase, branch1, toBranch1);
-				branchDiffs.set(mergeBase, branch2, toBranch2);
+				branchDiffs.set(base, branch1, toBranch1);
+				branchDiffs.set(base, branch2, toBranch2);
 			}
 		}
 
@@ -162,7 +150,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 				undefined,
 			);
 
-			const isHead = branch === headBranch;
+			const isHead = branch === head;
 
 			const icon = isHead ? "target" : "git-branch";
 			const color = isHead ? colors.head : Colors.hash(branch);
@@ -172,7 +160,10 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			const last = lastCommits.get(branch)!;
 
 			targetItem.tooltip = new MarkdownString(
-				`#### $(${icon}) ${branch}\n\n---\n${Md.commit("Last Commit", last)}`,
+				`#### $(${icon}) ${branch}\n\n---\n${Md.commit(
+					"Last Commit",
+					last,
+				)}`,
 				true,
 			);
 
@@ -187,11 +178,11 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 			for (const branch of branches) {
 				if (targetItem.branch === branch) continue;
 
-				const mergeBase = mergeBases.get(targetItem.branch, branch);
-				if (!mergeBase) continue;
+				const base = mergeBase.get(targetItem.branch, branch);
+				if (!base) continue;
 
-				const toBase = branchDiffs.get(mergeBase, branch)!;
-				const toTarget = branchDiffs.get(mergeBase, targetItem.branch)!;
+				const toBase = branchDiffs.get(base, branch)!;
+				const toTarget = branchDiffs.get(base, targetItem.branch)!;
 
 				const isMerged = toBase === 0;
 				const isLatest = toTarget === 0;
@@ -231,12 +222,7 @@ export class TreeProvider implements TreeDataProvider<TreeItem.ItemType> {
 					toBase,
 				)} Ahead Base`;
 
-				const mergeBaseCommit = await readCommit({
-					fs,
-					dir,
-					oid: mergeBase,
-					cache,
-				});
+				const mergeBaseCommit = await readCommit(repo, base, cache);
 				const mergeBaseItem = new TreeItem.CommitItem(
 					"Merge Base",
 					mergeBaseCommit,

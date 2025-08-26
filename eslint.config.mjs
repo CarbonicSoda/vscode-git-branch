@@ -1,36 +1,27 @@
-import typescriptEslint from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
+import eslint from "@eslint/js";
+import tslint from "typescript-eslint";
 
-export default [
-	{
-		files: ["**/*.ts"],
-	},
-	{
-		plugins: {
-			"@typescript-eslint": typescriptEslint,
-		},
+import stylistic from "@stylistic/eslint-plugin";
+import prettier from "eslint-config-prettier";
 
+export default tslint.config(
+	{ files: ["src/**/*.ts"] },
+	{ ignores: ["*config.*", "dist/**/*", "esbuild.cjs"] },
+
+	eslint.configs.recommended,
+	tslint.configs.eslintRecommended,
+
+	{
 		languageOptions: {
-			parser: tsParser,
-			ecmaVersion: 2022,
-			sourceType: "module",
-		},
-
-		rules: {
-			"@typescript-eslint/naming-convention": [
-				"warn",
-				{
-					selector: "import",
-					format: ["camelCase", "PascalCase"],
-				},
-			],
-			"curly": ["warn", "multi-line"],
-			"eqeqeq": "warn",
-			"no-throw-literal": "warn",
-			"semi": "warn",
-			"no-unused-expressions": "warn",
-			"no-unused-labels": "warn",
-			"no-unused-vars": "warn",
+			parserOptions: {
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname,
+			},
 		},
 	},
-];
+	tslint.configs.recommendedTypeChecked,
+	tslint.configs.stylisticTypeChecked,
+
+	stylistic.configs.recommended,
+	prettier,
+);

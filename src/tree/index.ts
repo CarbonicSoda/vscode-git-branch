@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 import { commands, TreeItemCollapsibleState, window } from "vscode";
 
 import { Janitor } from "../utils/janitor";
@@ -7,10 +8,10 @@ import { TreeProvider } from "./tree-provider";
 export namespace TreeView {
 	const expand = { primary: true, secondary: false };
 
-	export async function init(): Promise<void> {
+	export function init(): void {
 		const provider = new TreeProvider();
 
-		const explorer = window.createTreeView("git-branch-master.gitBranches", {
+		const explorer = window.createTreeView("git-branch-master.gitBranch", {
 			treeDataProvider: provider,
 			canSelectMany: false,
 		});
@@ -19,7 +20,12 @@ export namespace TreeView {
 		Janitor.add(
 			explorer,
 
-			//MO TODO remember to add context enablement to commands
+			explorer.onDidChangeVisibility((ev) => {
+				if (ev.visible) {
+					void refresh();
+				}
+			}),
+
 			commands.registerCommand("git-branch-master.refresh", refresh),
 
 			commands.registerCommand("git-branch-master.toggleFold", () => {
@@ -54,6 +60,6 @@ export namespace TreeView {
 			),
 		);
 
-		refresh();
+		void refresh();
 	}
 }

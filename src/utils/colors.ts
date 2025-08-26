@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 import { ColorThemeKind, ThemeColor, window } from "vscode";
 
 import VSCodeColors from "../json/vscode-colors.json";
@@ -6,9 +7,7 @@ import VSCodeColors from "../json/vscode-colors.json";
  * Functions to return {@link ThemeColor} from sRGB or string-hash
  */
 export namespace Colors {
-	const VSCodeColorsRgb: {
-		[themeKind: string]: { [colorName: string]: Rgb };
-	} = {};
+	const VSCodeColorsRgb: Record<string, Record<string, Rgb>> = {};
 	for (const [themeKind, colors] of Object.entries(VSCodeColors)) {
 		VSCodeColorsRgb[themeKind] = {};
 
@@ -40,9 +39,7 @@ export namespace Colors {
 		let bestDeltaE = Infinity;
 		let best = "";
 
-		for (const [colorName, colorRgb] of Object.entries(
-			VSCodeColorsRgb[themeKind as keyof typeof VSCodeColorsRgb],
-		)) {
+		for (const [colorName, colorRgb] of Object.entries(VSCodeColorsRgb[themeKind])) {
 			const deltaE = getDeltaE(rgb, colorRgb);
 
 			if (deltaE < bestDeltaE) {
@@ -128,9 +125,7 @@ export namespace Colors {
 		const deltaHkhsh = deltaH / sh;
 
 		const i =
-			deltaLKlsl * deltaLKlsl +
-			deltaCkcsc * deltaCkcsc +
-			deltaHkhsh * deltaHkhsh;
+			deltaLKlsl * deltaLKlsl + deltaCkcsc * deltaCkcsc + deltaHkhsh * deltaHkhsh;
 		return i < 0 ? 0 : Math.sqrt(i);
 	}
 

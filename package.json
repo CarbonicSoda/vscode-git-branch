@@ -2,7 +2,7 @@
 	"name": "git-branch-master",
 	"displayName": "Git Branch",
 	"description": "Level up Inspector for Git Branches",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"publisher": "carbonsoda",
 	"author": {
 		"name": "David W."
@@ -38,19 +38,17 @@
 	"main": "./dist/extension.js",
 	"capabilities": {
 		"virtualWorkspaces": {
-			"supported": false,
-			"description": "VSCode API is incomplete for virtual workspaces."
+			"supported": false
 		}
 	},
 	"contributes": {
 		"views": {
 			"scm": [
 				{
-					"id": "git-branch-master.gitBranches",
+					"id": "git-branch-master.gitBranch",
 					"name": "Branches",
 					"contextualTitle": "Git Branches",
-					"icon": "$(merge)",
-					"visibility": "collapsed"
+					"icon": "$(merge)"
 				}
 			]
 		},
@@ -58,34 +56,34 @@
 			{
 				"command": "git-branch-master.refresh",
 				"title": "Refresh Explorer",
-				"enablement": "view == git-branch-master.gitBranches",
+				"enablement": "view == git-branch-master.gitBranch",
 				"icon": "$(refresh)",
-				"category": "Better Memo"
+				"category": "Git Branch"
 			},
 			{
 				"command": "git-branch-master.toggleFold",
 				"title": "Toggle Fold",
-				"enablement": "view == git-branch-master.gitBranches",
+				"enablement": "view == git-branch-master.gitBranch",
 				"icon": "$(fold)",
-				"category": "Better Memo"
+				"category": "Git Branch"
 			},
 			{
 				"command": "git-branch-master.copyFullHash",
 				"title": "Copy Full Hash",
-				"enablement": "focusedView == git-branch-master.gitBranches",
-				"category": "Git Branches"
+				"enablement": "focusedView == git-branch-master.gitBranch",
+				"category": "Git Branch"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
 					"command": "git-branch-master.refresh",
-					"when": "view == git-branch-master.gitBranches",
+					"when": "view == git-branch-master.gitBranch",
 					"group": "navigation@1"
 				},
 				{
 					"command": "git-branch-master.toggleFold",
-					"when": "view == git-branch-master.gitBranches",
+					"when": "view == git-branch-master.gitBranch",
 					"group": "navigation@2"
 				}
 			]
@@ -106,19 +104,23 @@
 		"test": "vscode-test"
 	},
 	"dependencies": {
-		"isomorphic-git": "^1.30.2"
+		"neogit": "^1.2.0"
 	},
 	"devDependencies": {
-		"@types/node": "~22.15.29",
+		"@eslint/js": "^9.34.0",
+		"@stylistic/eslint-plugin": "^5.2.3",
+		"@types/node": "~22.15.35",
 		"@types/vscode": "^1.80.0",
-		"@typescript-eslint/eslint-plugin": "^8.33.1",
-		"@typescript-eslint/parser": "^8.33.1",
+		"@typescript-eslint/eslint-plugin": "^8.40.0",
+		"@typescript-eslint/parser": "^8.40.0",
 		"@vscode/test-cli": "^0.0.11",
 		"@vscode/test-electron": "^2.5.2",
-		"esbuild": "^0.25.5",
-		"eslint": "^9.28.0",
+		"esbuild": "^0.25.9",
+		"eslint": "^9.34.0",
+		"eslint-config-prettier": "^10.1.8",
 		"npm-run-all": "^4.1.5",
-		"typescript": "^5.8.3"
+		"typescript": "^5.9.2",
+		"typescript-eslint": "^8.41.0"
 	},
-	"packageManager": "pnpm@10.11.1"
+	"packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b"
 }

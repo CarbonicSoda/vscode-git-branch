@@ -1,12 +1,6 @@
-import {
-	env,
-	MarkdownString,
-	TreeItemCollapsibleState,
-	TreeItem as VSTreeItem,
-} from "vscode";
-
-import { ReadCommitResult } from "isomorphic-git";
-
+/* eslint-disable @typescript-eslint/no-namespace */
+import { Commit } from "neogit";
+import { env, MarkdownString, TreeItemCollapsibleState, TreeItem as VSTreeItem } from "vscode";
 import { Md } from "../utils/md";
 
 export namespace TreeItem {
@@ -23,11 +17,7 @@ export namespace TreeItem {
 	class ExplorerItem<
 		P extends undefined | ExplorerItem<undefined | ExplorerItem<undefined>>,
 	> extends VSTreeItem {
-		constructor(
-			public label: string,
-			expand: boolean | null,
-			public parent: P,
-		) {
+		constructor(public label: string, expand: boolean | null, public parent: P) {
 			super(
 				label,
 				expand === null
@@ -39,9 +29,7 @@ export namespace TreeItem {
 		}
 	}
 
-	export class BranchItem<
-		T extends "primary" | "secondary",
-	> extends ExplorerItem<
+	export class BranchItem<T extends "primary" | "secondary"> extends ExplorerItem<
 		T extends "primary" ? undefined : BranchItem<"primary">
 	> {
 		contextValue = "branch";
@@ -61,15 +49,11 @@ export namespace TreeItem {
 		command = {
 			title: "Copy Full Hash",
 			command: "git-branch-master.copyFullHash",
-			arguments: [async () => await env.clipboard.writeText(this.commit.oid)],
+			arguments: [async () => await env.clipboard.writeText(this.commit.hash)],
 		};
 
-		constructor(
-			name: string,
-			public commit: ReadCommitResult,
-			parent: BranchItem<"secondary">,
-		) {
-			super(commit.oid.slice(0, 7), null, parent);
+		constructor(name: string, public commit: Commit, parent: BranchItem<"secondary">) {
+			super(commit.hash.slice(0, 7), null, parent);
 
 			this.tooltip = new MarkdownString(
 				`${Md.commit(name, commit)}\n\n---\nClick to Copy Full Hash`,

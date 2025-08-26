@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-namespace */
+
 /**
  * Centrally manages disposable(-like)s and timeouts/intervals
  */
@@ -10,10 +12,9 @@ export namespace Janitor {
 	/**
 	 * Type with `dispose()` function signature
 	 */
-	export type DisposableLike = {
-		[any: string]: any;
-		dispose(...args: any): any;
-	};
+	export interface DisposableLike {
+		dispose(...args: unknown[]): unknown;
+	}
 
 	export const managed: (DisposableLike | NodeJS.Timeout)[][] = [];
 	export let currentId = 0;
@@ -22,9 +23,7 @@ export namespace Janitor {
 	 * @param disposableOrTimeout instances to manage
 	 * @returns unique id for `DisposableOrTimeout`
 	 */
-	export function add(
-		...disposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]
-	): Id {
+	export function add(...disposableOrTimeout: (DisposableLike | NodeJS.Timeout)[]): Id {
 		managed[currentId++] = disposableOrTimeout;
 		return currentId;
 	}
